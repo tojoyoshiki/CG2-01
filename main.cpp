@@ -102,6 +102,29 @@ IDxcBlob* CompileShader(
 	shaderResult->Release();
 	return shaderBlob;
 }
+ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes) {
+	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
+	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	D3D12_RESOURCE_DESC vertexResourceDesc{};
+	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	vertexResourceDesc.Width = sizeof(Vector4) * 3;
+	vertexResourceDesc.Height = 1;
+	vertexResourceDesc.DepthOrArraySize = 1;
+	vertexResourceDesc.MipLevels = 1;
+	vertexResourceDesc.SampleDesc.Count = 1;
+	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	ID3D12Resource* vertexResource = nullptr;
+	hr = device->CreateCommittedResource(
+		&uploadHeapProperties,
+		D3D12_HEAP_FLAG_NONE, 
+		&vertexResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ, 
+		nullptr, 
+		IID_PPV_ARGS(&vertexResource));
+	assert(SUCCEEDED(hr));
+
+	return vertexResource;
+}
 struct Vector4 {
 	float x, y, z, w;
 };
@@ -334,6 +357,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3D12_ROOT_SIGNATURE_DESC descriptionRootSignature{};
 	descriptionRootSignature.Flags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	D3D12_ROOT_PARAMETER rootParameters[1] = {};
+	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	rootParameters[0].Descriptor.ShaderRegister = 0;
+	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	rootParameters[1].Descriptor.ShaderRegister = 0;
+	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	descriptionRootSignature.pParameters = rootParameters;
+	descriptionRootSignature.NumParameters = _countof(rootParameters);
+
 	ID3DBlob* signatureBlob = nullptr;
 	ID3DBlob* errorBlob = nullptr;
 	hr = D3D12SerializeRootSignature(&descriptionRootSignature,
@@ -382,28 +415,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ID3D12PipelineState* graphicsPipelineState = nullptr;
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
-	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
-	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	D3D12_RESOURCE_DESC vertexResourceDesc{};
-	vertexResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	vertexResourceDesc.Width = sizeof(Vector4) * 3;
-	vertexResourceDesc.Height = 1;
-	vertexResourceDesc.DepthOrArraySize = 1;
-	vertexResourceDesc.MipLevels = 1;
-	vertexResourceDesc.SampleDesc.Count = 1;
-	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	ID3D12Resource* vertexResource = nullptr;
-	hr = device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
-	assert(SUCCEEDED(hr));
-	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
-	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-	vertexBufferView.SizeInBytes = sizeof(Vector4) * 3;
-	vertexBufferView.StrideInBytes = sizeof(Vector4);
-	Vector4* vertexData = nullptr;
-	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-	vertexData[0] = { -0.5f,-0.5f,0.0f,1.0f };
-	vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
-	vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };
+
+	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(Vector4) * 3);
+	ID3D12Resource* materialResource = CreateBufferResource(device, sizeof(Vector4));
+	Vector4* materialData = nullptr;
+	materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
+	materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
+
+	//D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
+	//vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
+	//vertexBufferView.SizeInBytes = sizeof(Vector4) * 3;
+	//vertexBufferView.StrideInBytes = sizeof(Vector4);
+	//Vector4* vertexData = nullptr;
+	//vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	//vertexData[0] = { -0.5f,-0.5f,0.0f,1.0f };
+	//vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
+	//vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };
+
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = kClientWidth;
 	viewport.Height = kClientHeight;
@@ -417,76 +445,84 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	scissorRect.top = 0;
 	scissorRect.bottom = kClientHeight;
 
-		// ウィンドウの×ボタンが押されるまでループ
-		while (msg.message != WM_QUIT) {
-			// Windowsにメッセージが来てたら最優先で処理される
-			if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-				TranslateMessage(&msg);
-				DispatchMessage(&msg);
+	// ウィンドウの×ボタンが押されるまでループ
+	while (msg.message != WM_QUIT) {
+		// Windowsにメッセージが来てたら最優先で処理される
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+		else {
+			// ゲームの処理
+			// これから書き込むバックバッファのインデックスを取得
+			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+			// TransitionBarrierの設定
+			D3D12_RESOURCE_BARRIER barrier{};
+			// 今回のバリアはTransition
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			// Noneにしておく
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			// バリアを張る対象のリソース。現在のバックバッファに対して行う
+			barrier.Transition.pResource = swapChainResources[backBufferIndex];
+			// 遷移前（現在）のResourceState
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+			// 遷移後のResourceState
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			// TransitionBarrierを張る
+			commandList->ResourceBarrier(1, &barrier);
+			// 描画先のRTVを設定する
+			commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
+			// 指定した色で画面全体をクリアする
+			float clearColor[] = { 0.1f,0.25f,0.5f,1.0f }; // 青っぽい色。RGBAの略
+			commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
+			commandList->RSSetViewports(1, &viewport);
+			commandList->RSSetScissorRects(1, &scissorRect);
+			commandList->SetGraphicsRootSignature(rootSignature);
+			commandList->SetPipelineState(graphicsPipelineState);
+			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			commandList->DrawInstanced(3, 1, 0, 0);
+			// 画面に描く処理はすべて終わり、画面に映すので、状態を遷移
+			// 今回はRenderTargetからPresentにする
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+			// TransitionBarrierを張る
+			commandList->ResourceBarrier(1, &barrier);
+			// コマンドリストの内容を確定させる。すべてのコマンドを積んでからCloseすること
+			hr = commandList->Close();
+			assert(SUCCEEDED(hr));
+			// GPUにコマンドリストの実行を行わせる
+			ID3D12CommandList* commandLists[] = { commandList };
+			commandQueue->ExecuteCommandLists(1, commandLists);
+			// GPUとOSに画面の交換を行うように通知する
+			swapChain->Present(1, 0);
+			// Fenceの値を更新
+			fenceValue++;
+			// GPUがここまでたどり着いたときに、Fenceの値を指定した値に代入するようにSignalを送る
+			commandQueue->Signal(fence, fenceValue);
+			// Fenceの値が指定したSignal値をたどり着いているか確認する
+			// GetCompletedValueの初期値はFence作成時に渡した初期値
+			if (fence->GetCompletedValue() < fenceValue) {
+				// 指定したSignalにたどり着いていないので、たどり着くまで待つようにイベントを設定する
+				fence->SetEventOnCompletion(fenceValue, fenceEvent);
+				// イベントを待つ
+				WaitForSingleObject(fenceEvent, INFINITE);
 			}
-			else {
-				// ゲームの処理
-				// これから書き込むバックバッファのインデックスを取得
-				UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
-				// TransitionBarrierの設定
-				D3D12_RESOURCE_BARRIER barrier{};
-				// 今回のバリアはTransition
-				barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-				// Noneにしておく
-				barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-				// バリアを張る対象のリソース。現在のバックバッファに対して行う
-				barrier.Transition.pResource = swapChainResources[backBufferIndex];
-				// 遷移前（現在）のResourceState
-				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-				// 遷移後のResourceState
-				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-				// TransitionBarrierを張る
-				commandList->ResourceBarrier(1, &barrier);
-				// 描画先のRTVを設定する
-				commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
-				// 指定した色で画面全体をクリアする
-				float clearColor[] = { 0.1f,0.25f,0.5f,1.0f }; // 青っぽい色。RGBAの略
-				commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
-				commandList->RSSetViewports(1, &viewport);
-				commandList->RSSetScissorRects(1, &scissorRect);
-				commandList->SetGraphicsRootSignature(rootSignature);
-				commandList->SetPipelineState(graphicsPipelineState);
-				commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-				commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-				commandList->DrawInstanced(3, 1, 0, 0);
-				// 画面に描く処理はすべて終わり、画面に映すので、状態を遷移
-				// 今回はRenderTargetからPresentにする
-				barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-				barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-				// TransitionBarrierを張る
-				commandList->ResourceBarrier(1, &barrier);
-				// コマンドリストの内容を確定させる。すべてのコマンドを積んでからCloseすること
-				hr = commandList->Close();
-				assert(SUCCEEDED(hr));
-				// GPUにコマンドリストの実行を行わせる
-				ID3D12CommandList* commandLists[] = { commandList };
-				commandQueue->ExecuteCommandLists(1, commandLists);
-				// GPUとOSに画面の交換を行うように通知する
-				swapChain->Present(1, 0);
-				// Fenceの値を更新
-				fenceValue++;
-				// GPUがここまでたどり着いたときに、Fenceの値を指定した値に代入するようにSignalを送る
-				commandQueue->Signal(fence, fenceValue);
-				// Fenceの値が指定したSignal値をたどり着いているか確認する
-				// GetCompletedValueの初期値はFence作成時に渡した初期値
-				if (fence->GetCompletedValue() < fenceValue) {
-					// 指定したSignalにたどり着いていないので、たどり着くまで待つようにイベントを設定する
-					fence->SetEventOnCompletion(fenceValue, fenceEvent);
-					// イベントを待つ
-					WaitForSingleObject(fenceEvent, INFINITE);
-				}
-				// 次のフレーム用のコマンドリストを準備
-				hr = commandAllocator->Reset();
-				assert(SUCCEEDED(hr));
-				hr = commandList->Reset(commandAllocator, nullptr);
-				assert(SUCCEEDED(hr));
+			// 次のフレーム用のコマンドリストを準備
+			hr = commandAllocator->Reset();
+			assert(SUCCEEDED(hr));
+			hr = commandList->Reset(commandAllocator, nullptr);
+			assert(SUCCEEDED(hr));
+
+			ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(Matrix4x4)) {
+				Matrix4x4* wvpData = nullptr;
+				wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpData));
+				*wvpData = MakeIdentyty4x4();
 			}
 		}
+	}
+	//wvpResource - ＞Resource;
+
 	// 解放処理
 	CloseHandle(fenceEvent);
 	fence->Release();
