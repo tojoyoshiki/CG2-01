@@ -36,6 +36,29 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
+void UploadTextureData(ID3D12Resource* texture,const DirectX::ScrathImage& mipImages,
+	ID3D12 Device* device, ID3D12GraphicsCommandList* commandList) {
+
+	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
+	DirectX::PrepareUpLoad(device, mipimages, GetImages(), mipimages.GetImageCount(),
+		mipImages.GetMetadata(), subresources);
+	uint64_t intermediateSize = GetReqouiredIntermediateSize(texture, 0, UINT(subresource.size()));
+	ID3D12Resource* intermediateResourceCreateBufferResource(device, intermediateSize);
+	UpdaateSubresources(commandList, texture, intermediateResource, 0, 0, UINT(subresources.Size()),
+		subresources.data());
+
+	D3D12_RESOURCE_BARRIER barrier{};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+	barrier.Transition.pResource = texture;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	barrier.Transition.StateBefore = D3D12_Resource_STATE_COPY_DEST;
+	barrier.Transition.StateAfter = D3D12_Resource_STATE_GENERIC_READ;
+	commandList->ResourceBarrier(1, &barrier);
+
+	return intermediateResource;
+}
+
 std::wstring ConvertString(const std::string& str) {
 	if (str.empty()) {
 		return std::wstring();
@@ -126,7 +149,6 @@ IDxcBlob* CompileShader(
 	shaderResult->Release();
 
 	return shaderBlob;
-
 }
 
 struct Vector4 {
@@ -220,7 +242,6 @@ Matrix4x4 MakeRotateMatrix(const Vector3& rotate) {
 		0.0f,-sinf(rotate.x),cosf(rotate.x),0.0f,
 		0.0f,0.0f,0.0f,1.0f
 	};
-
 
 	Matrix4x4 rotateY = {
 		cosf(rotate.y),0.0f,-sinf(rotate.y),0.0f,
@@ -362,8 +383,19 @@ ID3D12DescriptorHeap* CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTO
 	return descriptorHeap;
 }
 
+//DirectX::ScratchImage LoadTexture(const std::string& filePath) {
+//	DirectX::ScrathImage image{};
+//	std::wstring filePathW = ConvertString(filePath);
+//	HRESULT hr = DirectX::LoadFrowINFile(filePath.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+//	assert(SUCCEEDED(hr));
+//
+//	DirectX::ScratchImage mipImages{};
+//}
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+
+	//CoInitializeEx(0, COINIT_MULTITHEREADED);
 
 #pragma region Windowの生成
 	WNDCLASS wc{};
@@ -391,17 +423,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// ウィンドウの生成
 	HWND hwnd = CreateWindow(
-		wc.lpszClassName,				// 利用するクラス名
-		L"CG2",							// タイトルバーの文字
-		WS_OVERLAPPEDWINDOW,			// よく見るウィンドウスタイル		
-		CW_USEDEFAULT,					// 表示X座標（Windowsに任せる）
-		CW_USEDEFAULT,					// 表示Y座標（WindowsOSに任せる）
-		wrc.right - wrc.left,			// ウィンドウ横幅
-		wrc.bottom - wrc.top,			// ウィンドウ縦幅
-		nullptr,						// 親ウィンドウハンドル
-		nullptr,						// メニューハンドル
-		wc.hInstance,					// インスタンスハンドル
-		nullptr);						// オプション
+		wc.lpszClassName,		// 利用するクラス名
+		L"CG2",					// タイトルバーの文字
+		WS_OVERLAPPEDWINDOW,	// よく見るウィンドウスタイル		
+		CW_USEDEFAULT,			// 表示X座標（Windowsに任せる）
+		CW_USEDEFAULT,			// 表示Y座標（WindowsOSに任せる）
+		wrc.right - wrc.left,	// ウィンドウ横幅
+		wrc.bottom - wrc.top,	// ウィンドウ縦幅
+		nullptr,				// 親ウィンドウハンドル
+		nullptr,				// メニューハンドル
+		wc.hInstance,			// インスタンスハンドル
+		nullptr);				// オプション
 
 	// ウィンドウを表示する
 	ShowWindow(hwnd, SW_SHOW);
@@ -629,13 +661,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptionRootSignature.Flags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
-	D3D12_ROOT_PARAMETER rootParameters[2] = {};
+	D3D12_ROOT_PARAMETER rootParameters[3] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	rootParameters[0].Descriptor.ShaderRegister = 0;
 	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 	rootParameters[1].Descriptor.ShaderRegister = 0;
+	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
+	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+	.30
+
 	descriptionRootSignature.pParameters = rootParameters;
 	descriptionRootSignature.NumParameters = _countof(rootParameters);
 
@@ -705,7 +743,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
-	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(Vector4) * 3);
+	ID3D12Resource* vertexResource = CreateBufferResource(device, sizeof(Vector4) * 6);
 
 	ID3D12Resource* materialResource = CreateBufferResource(device, sizeof(Vector4));
 
@@ -717,7 +755,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-	vertexBufferView.SizeInBytes = sizeof(Vector4) * 3;
+	vertexBufferView.SizeInBytes = sizeof(Vector4) * 6;
 	vertexBufferView.StrideInBytes = sizeof(Vector4);
 
 	Vector4* vertexData = nullptr;
@@ -725,6 +763,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexData[0] = { -0.5f,-0.5f,0.0f,1.0f };
 	vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
 	vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };
+
+
+	//DirectX::ScratchImage mipImages = LoadTeture("resources/uvChecker.png");
+	//const DirectX::TexMatadata& metadata = mipImages.GetMetadata();
+	//ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
+	//UploadTextureData(textureResource, mipImages);
+
+	//D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	//srvDesc.Format = metadata.format;
+	//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	//srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
+
+	//D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	//D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	//textureSrvHandleCPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
+	//textureSrvHandleGPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
+	//device->CreateShaderResourceView(textureResource, &srvDesc, textureSrvHandleCPU);
+
 
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = kClientWidth;
@@ -904,3 +961,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	return 0;
 }
+
+
+//D3D12_RESOURCE_DESC resourceDesc{};
+//resourceDesc.Width = UINT(metadata.width);
+//resourceDesc.Height = UINT(metadata.height);
+//resourceDesc.MipLevels = UINT16(metadata.miplevels);
+//resourceDesc.DepthOrArraySize = UINT16(metadata.arraySize);
+//resourceDesc.Format = metadata.fomat;
+//resourceDesc.SampleDesc.Count = 1;
+//resourceDesc.Dimension = D3D12_RESOUCE_DIMENSION(metadata.dimension);
+
+//D3D12_HEAP_PROPERTIES heapProperties{};
+//heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+//heapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;
+//heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPETY_WRITE_BACK;
+//heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
