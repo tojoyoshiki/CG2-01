@@ -7,6 +7,13 @@
 #include <cassert>
 #include <dxgidebug.h>
 #include <dxcapi.h>
+#include <math.h>
+#include "externals/imgui/imgui.h"
+#include "externals/imgui/imgui_impl_dx12.h"
+#include "externals/imgui/imgui_impl_win32.h"
+#include "externals/DirectXTex/DirectXTex.h"
+#include "../../../Downloads/DirectXTex-mar2023/DirectXTex/d3dx12.h"
+
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
@@ -23,6 +30,30 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	// 標準のメッセージ処理を行う
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
+////
+////void UploadTextureData(ID3D12Resource* texture,const DirectX::ScratchImage& mipImages,
+////	ID3D12Device* device, ID3D12GraphicsCommandList* commandList) {
+////
+////	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
+////	DirectX::PrepareUpload(device, mipImages, GetImages(), mipImages.GetImageCount(),
+////		mipImages.GetMetadata(), subResources);
+////	uint64_t intermediateSize = GetRequiredIntermediateSize(texture, 0, UINT(subresources.size()));
+////	ID3D12Resource* intermediateResourceCreateBufferResource(device, intermediateSize);
+////	UpdateSubresources(commandList, texture, intermediateResource, 0, 0, UINT(subresources.Size()),
+////		subresources.data());
+////
+////	D3D12_RESOURCE_BARRIER barrier{};
+////	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+////	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+////	barrier.Transition.pResource = texture;
+////	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+////	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+////	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+////	commandList->ResourceBarrier(1, &barrier);
+////
+////	return intermediateResource;
+////}
+
 std::wstring ConvertString(const std::string& str) {
 	if (str.empty()) {
 		return std::wstring();
@@ -128,8 +159,214 @@ ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes) {
 struct Vector4 {
 	float x, y, z, w;
 };
+
+Matrix4x4 Multiply(const Matrix4x4& m1, const Matrix4x4& m2) {
+	Matrix4x4 ret = {};
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			for (int k = 0; k < 4; k++) {
+				ret.mat[i][j] += m1.mat[i][k] * m2.mat[k][j];
+
+			}
+		}
+	}
+	return ret;
+}
+
+struct Transform {
+	Vector3 scale;
+	Vector3 rotate;
+	Vector3 translate;
+};
+
+Matrix4x4 MakeScaleMatrix(const Vector3& scale) {
+	Matrix4x4 result = {};
+
+	result.mat[0][0] = scale.x;
+	result.mat[1][1] = scale.y;
+	result.mat[2][2] = scale.z;
+	result.mat[3][3] = 1.0f;
+
+	return result;
+}
+
+Matrix4x4 MakeTranslateMatrix(const Vector3& translate) {
+	Matrix4x4 result = {};
+
+	result.mat[0][0] = 1.0f;
+	result.mat[1][1] = 1.0f;
+	result.mat[2][2] = 1.0f;
+	result.mat[3][3] = 1.0f;
+	result.mat[3][0] = translate.x;
+	result.mat[3][1] = translate.y;
+	result.mat[3][2] = translate.z;
+
+	return result;
+}
+
+Matrix4x4 MakeRotateMatrix(const Vector3& rotate) {
+
+	Matrix4x4 rotateX = {
+		1.0f,0.0f,0.0f,0.0f,
+		0.0f,cosf(rotate.x),sinf(rotate.x),0.0f,
+		0.0f,-sinf(rotate.x),cosf(rotate.x),0.0f,
+		0.0f,0.0f,0.0f,1.0f
+	};
+
+	Matrix4x4 rotateY = {
+		cosf(rotate.y),0.0f,-sinf(rotate.y),0.0f,
+		0.0f,1.0f,0.0f,0.0f,
+		sinf(rotate.y),0.0f,cosf(rotate.y),0.0f,
+		0.0f,0.0f,0.0f,1.0f
+	};
+
+	Matrix4x4 rotateZ = {
+		cosf(rotate.z),-sinf(rotate.z),0.0f,0.0f,
+		-sinf(rotate.z),cosf(rotate.z),0.0f,0.0f,
+		0.0f,0.0f,1.0f,0.0f,
+		0.0f,0.0f,0.0f,1.0f
+	};
+	return Multiply(Multiply(rotateX, rotateY), rotateZ);
+}
+
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate) {
+	Matrix4x4 ScaleM = MakeScaleMatrix(scale);
+	Matrix4x4 RotateM = MakeRotateMatrix(rotate);
+	Matrix4x4 TransM = MakeTranslateMatrix(translate);
+
+	return Multiply(Multiply(TransM, RotateM), ScaleM);
+}
+
+Matrix4x4 Inverse(const Matrix4x4& m) {
+	float determinant =
+		+m.mat[0][0] * m.mat[1][1] * m.mat[2][2] * m.mat[3][3]
+		+ m.mat[0][0] * m.mat[1][2] * m.mat[2][3] * m.mat[3][1]
+		+ m.mat[0][0] * m.mat[1][3] * m.mat[2][1] * m.mat[3][2]
+
+		- m.mat[0][0] * m.mat[1][3] * m.mat[2][2] * m.mat[3][1]
+		- m.mat[0][0] * m.mat[1][2] * m.mat[2][1] * m.mat[3][3]
+		- m.mat[0][0] * m.mat[1][1] * m.mat[2][3] * m.mat[3][2]
+
+		- m.mat[0][1] * m.mat[1][0] * m.mat[2][2] * m.mat[3][3]
+		- m.mat[0][2] * m.mat[1][0] * m.mat[2][3] * m.mat[3][1]
+		- m.mat[0][3] * m.mat[1][0] * m.mat[2][1] * m.mat[3][2]
+
+		+ m.mat[0][3] * m.mat[1][0] * m.mat[2][2] * m.mat[3][1]
+		+ m.mat[0][2] * m.mat[1][0] * m.mat[2][1] * m.mat[3][3]
+		+ m.mat[0][1] * m.mat[1][0] * m.mat[2][3] * m.mat[3][2]
+
+		+ m.mat[0][1] * m.mat[1][2] * m.mat[2][0] * m.mat[3][3]
+		+ m.mat[0][2] * m.mat[1][3] * m.mat[2][0] * m.mat[3][1]
+		+ m.mat[0][3] * m.mat[1][1] * m.mat[2][0] * m.mat[3][2]
+
+		- m.mat[0][3] * m.mat[1][2] * m.mat[2][0] * m.mat[3][1]
+		- m.mat[0][2] * m.mat[1][1] * m.mat[2][0] * m.mat[3][3]
+		- m.mat[0][1] * m.mat[1][3] * m.mat[2][0] * m.mat[3][2]
+
+		- m.mat[0][1] * m.mat[1][2] * m.mat[2][3] * m.mat[3][0]
+		- m.mat[0][2] * m.mat[1][3] * m.mat[2][1] * m.mat[3][0]
+		- m.mat[0][3] * m.mat[1][1] * m.mat[2][2] * m.mat[3][0]
+
+		+ m.mat[0][3] * m.mat[1][2] * m.mat[2][1] * m.mat[3][0]
+		+ m.mat[0][2] * m.mat[1][1] * m.mat[2][3] * m.mat[3][0]
+		+ m.mat[0][1] * m.mat[1][3] * m.mat[2][2] * m.mat[3][0];
+
+	Matrix4x4 result = {};
+	float recpDeterminant = 1.0f / determinant;
+	result.mat[0][0] = (m.mat[1][1] * m.mat[2][2] * m.mat[3][3] + m.mat[1][2] * m.mat[2][3] * m.mat[3][1] +
+		m.mat[1][3] * m.mat[2][1] * m.mat[3][2] - m.mat[1][3] * m.mat[2][2] * m.mat[3][1] -
+		m.mat[1][2] * m.mat[2][1] * m.mat[3][3] - m.mat[1][1] * m.mat[2][3] * m.mat[3][2]) * recpDeterminant;
+	result.mat[0][1] = (-m.mat[0][1] * m.mat[2][2] * m.mat[3][3] - m.mat[0][2] * m.mat[2][3] * m.mat[3][1] -
+		m.mat[0][3] * m.mat[2][1] * m.mat[3][2] + m.mat[0][3] * m.mat[2][2] * m.mat[3][1] +
+		m.mat[0][2] * m.mat[2][1] * m.mat[3][3] + m.mat[0][1] * m.mat[2][3] * m.mat[3][2]) * recpDeterminant;
+	result.mat[0][2] = (m.mat[0][1] * m.mat[1][2] * m.mat[3][3] + m.mat[0][2] * m.mat[1][3] * m.mat[3][1] +
+		m.mat[0][3] * m.mat[1][1] * m.mat[3][2] - m.mat[0][3] * m.mat[1][2] * m.mat[3][1] -
+		m.mat[0][2] * m.mat[1][1] * m.mat[3][3] - m.mat[0][1] * m.mat[1][3] * m.mat[3][2]) * recpDeterminant;
+	result.mat[0][3] = (-m.mat[0][1] * m.mat[1][2] * m.mat[2][3] - m.mat[0][2] * m.mat[1][3] * m.mat[2][1] -
+		m.mat[0][3] * m.mat[1][1] * m.mat[2][2] + m.mat[0][3] * m.mat[1][2] * m.mat[2][1] +
+		m.mat[0][2] * m.mat[1][1] * m.mat[2][3] + m.mat[0][1] * m.mat[1][3] * m.mat[2][2]) * recpDeterminant;
+
+	result.mat[1][0] = (-m.mat[1][0] * m.mat[2][2] * m.mat[3][3] - m.mat[1][2] * m.mat[2][3] * m.mat[3][0] -
+		m.mat[1][3] * m.mat[2][0] * m.mat[3][2] + m.mat[1][3] * m.mat[2][2] * m.mat[3][0] +
+		m.mat[1][2] * m.mat[2][0] * m.mat[3][3] + m.mat[1][0] * m.mat[2][3] * m.mat[3][2]) * recpDeterminant;
+	result.mat[1][1] = (m.mat[0][0] * m.mat[2][2] * m.mat[3][3] + m.mat[0][2] * m.mat[2][3] * m.mat[3][0] +
+		m.mat[0][3] * m.mat[2][0] * m.mat[3][2] - m.mat[0][3] * m.mat[2][2] * m.mat[3][0] -
+		m.mat[0][2] * m.mat[2][0] * m.mat[3][3] - m.mat[0][0] * m.mat[2][3] * m.mat[3][2]) * recpDeterminant;
+	result.mat[1][2] = (-m.mat[0][0] * m.mat[1][2] * m.mat[3][3] - m.mat[0][2] * m.mat[1][3] * m.mat[3][0] -
+		m.mat[0][3] * m.mat[1][0] * m.mat[3][2] + m.mat[0][3] * m.mat[1][2] * m.mat[3][0] +
+		m.mat[0][2] * m.mat[1][0] * m.mat[3][3] + m.mat[0][0] * m.mat[1][3] * m.mat[3][2]) * recpDeterminant;
+	result.mat[1][3] = (m.mat[0][0] * m.mat[1][2] * m.mat[2][3] + m.mat[0][2] * m.mat[1][3] * m.mat[2][0] +
+		m.mat[0][3] * m.mat[1][0] * m.mat[2][2] - m.mat[0][3] * m.mat[1][2] * m.mat[2][0] -
+		m.mat[0][2] * m.mat[1][0] * m.mat[2][3] - m.mat[0][0] * m.mat[1][3] * m.mat[2][2]) * recpDeterminant;
+
+	result.mat[2][0] = (m.mat[1][0] * m.mat[2][1] * m.mat[3][3] + m.mat[1][1] * m.mat[2][3] * m.mat[3][0] +
+		m.mat[1][3] * m.mat[2][0] * m.mat[3][1] - m.mat[1][3] * m.mat[2][1] * m.mat[3][0] -
+		m.mat[1][1] * m.mat[2][0] * m.mat[3][3] - m.mat[1][0] * m.mat[2][3] * m.mat[3][1]) * recpDeterminant;
+	result.mat[2][1] = (-m.mat[0][0] * m.mat[2][1] * m.mat[3][3] - m.mat[0][1] * m.mat[2][3] * m.mat[3][0] -
+		m.mat[0][3] * m.mat[2][0] * m.mat[3][1] + m.mat[0][3] * m.mat[2][1] * m.mat[3][0] +
+		m.mat[0][1] * m.mat[2][0] * m.mat[3][3] + m.mat[0][0] * m.mat[2][3] * m.mat[3][1]) * recpDeterminant;
+	result.mat[2][2] = (m.mat[0][0] * m.mat[1][1] * m.mat[3][3] + m.mat[0][1] * m.mat[1][3] * m.mat[3][0] +
+		m.mat[0][3] * m.mat[1][0] * m.mat[3][1] - m.mat[0][3] * m.mat[1][1] * m.mat[3][0] -
+		m.mat[0][1] * m.mat[1][0] * m.mat[3][3] - m.mat[0][0] * m.mat[1][3] * m.mat[3][1]) * recpDeterminant;
+	result.mat[2][3] = (-m.mat[0][0] * m.mat[1][1] * m.mat[2][3] - m.mat[0][1] * m.mat[1][3] * m.mat[2][0] -
+		m.mat[0][3] * m.mat[1][0] * m.mat[2][1] + m.mat[0][3] * m.mat[1][1] * m.mat[2][0] +
+		m.mat[0][1] * m.mat[1][0] * m.mat[2][3] + m.mat[0][0] * m.mat[1][3] * m.mat[2][1]) * recpDeterminant;
+
+	result.mat[3][0] = (-m.mat[1][0] * m.mat[2][1] * m.mat[3][2] - m.mat[1][1] * m.mat[2][2] * m.mat[3][0] -
+		m.mat[1][2] * m.mat[2][0] * m.mat[3][1] + m.mat[1][2] * m.mat[2][1] * m.mat[3][0] +
+		m.mat[1][1] * m.mat[2][0] * m.mat[3][2] + m.mat[1][0] * m.mat[2][2] * m.mat[3][1]) * recpDeterminant;
+	result.mat[3][1] = (m.mat[0][0] * m.mat[2][1] * m.mat[3][2] + m.mat[0][1] * m.mat[2][2] * m.mat[3][0] +
+		m.mat[0][2] * m.mat[2][0] * m.mat[3][1] - m.mat[0][2] * m.mat[2][1] * m.mat[3][0] -
+		m.mat[0][1] * m.mat[2][0] * m.mat[3][2] - m.mat[0][0] * m.mat[2][2] * m.mat[3][1]) * recpDeterminant;
+	result.mat[3][2] = (-m.mat[0][0] * m.mat[1][1] * m.mat[3][2] - m.mat[0][1] * m.mat[1][2] * m.mat[3][0] -
+		m.mat[0][2] * m.mat[1][0] * m.mat[3][1] + m.mat[0][2] * m.mat[1][1] * m.mat[3][0] +
+		m.mat[0][1] * m.mat[1][0] * m.mat[3][2] + m.mat[0][0] * m.mat[1][2] * m.mat[3][1]) * recpDeterminant;
+	result.mat[3][3] = (m.mat[0][0] * m.mat[1][1] * m.mat[2][2] + m.mat[0][1] * m.mat[1][2] * m.mat[2][0] +
+		m.mat[0][2] * m.mat[1][0] * m.mat[2][1] - m.mat[0][2] * m.mat[1][1] * m.mat[2][0] -
+		m.mat[0][1] * m.mat[1][0] * m.mat[2][2] - m.mat[0][0] * m.mat[1][2] * m.mat[2][1]) * recpDeterminant;
+
+	return result;
+}
+
+float cot(float theta) {
+	return 1 / std::tanf(theta);
+}
+
+Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) {
+
+	Matrix4x4 result = {};
+	result.mat[0][0] = 1.0f / aspectRatio * cot(fovY / 2);
+	result.mat[1][1] = cot(fovY / 2);
+	result.mat[2][2] = farClip / (farClip - nearClip);
+	result.mat[2][3] = 1.0f;
+	result.mat[3][2] = (-nearClip + farClip) / (farClip - nearClip);
+	return result;
+}
+
+ID3D12DescriptorHeap* CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptor, bool shaderVisible) {
+	ID3D12DescriptorHeap* descriptorHeap = nullptr;
+	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc{};
+	descriptorHeapDesc.Type = heapType;
+	descriptorHeapDesc.NumDescriptors = numDescriptor;
+	descriptorHeapDesc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	HRESULT hr = device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap));
+	return descriptorHeap;
+}
+
+//DirectX::ScratchImage LoadTexture(const std::string& filePath) {
+//	DirectX::ScrathImage image{};
+//	std::wstring filePathW = ConvertString(filePath);
+//	HRESULT hr = DirectX::LoadFrowINFile(filePath.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+//	assert(SUCCEEDED(hr));
+//
+//	DirectX::ScratchImage mipImages{};
+//}
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
+
+	//CoInitializeEx(0, COINIT_MULTITHEREADED);
+
 #pragma region Windowの生成
 	WNDCLASS wc{};
 	//ウィンドウプロシージャ
@@ -363,7 +600,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	rootParameters[0].Descriptor.ShaderRegister = 0;
 	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 	rootParameters[1].Descriptor.ShaderRegister = 0;
-	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
+	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
+	.30
+
 	descriptionRootSignature.pParameters = rootParameters;
 	descriptionRootSignature.NumParameters = _countof(rootParameters);
 
@@ -400,6 +642,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	assert(vertexShaderBlob != nullptr);
 	IDxcBlob* pixelShaderBlob = CompileShader(L"Object3d.PS.hlsl", L"ps_6_0", dxcUtils, dxcCompiler, includeHandler);
 	assert(pixelShaderBlob != nullptr);
+
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsPipelineStateDesc{};
 	graphicsPipelineStateDesc.pRootSignature = rootSignature;
 	graphicsPipelineStateDesc.InputLayout = inputLayoutDesc;
@@ -422,15 +665,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	materialResource->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
 	materialData = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
 
-	//D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
-	//vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
-	//vertexBufferView.SizeInBytes = sizeof(Vector4) * 3;
-	//vertexBufferView.StrideInBytes = sizeof(Vector4);
-	//Vector4* vertexData = nullptr;
-	//vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
-	//vertexData[0] = { -0.5f,-0.5f,0.0f,1.0f };
-	//vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
-	//vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };
 
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = kClientWidth;
@@ -557,8 +791,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
 		debug->Release();
 	}
+
 	// 出力ウィンドウへの文字出力
 	OutputDebugStringA("Hello,DirectX!\n");
 
 	return 0;
 }
+
+
+//D3D12_RESOURCE_DESC resourceDesc{};
+//resourceDesc.Width = UINT(metadata.width);
+//resourceDesc.Height = UINT(metadata.height);
+//resourceDesc.MipLevels = UINT16(metadata.miplevels);
+//resourceDesc.DepthOrArraySize = UINT16(metadata.arraySize);
+//resourceDesc.Format = metadata.fomat;
+//resourceDesc.SampleDesc.Count = 1;
+//resourceDesc.Dimension = D3D12_RESOUCE_DIMENSION(metadata.dimension);
+
+//D3D12_HEAP_PROPERTIES heapProperties{};
+//heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+//heapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;
+//heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPETY_WRITE_BACK;
+//heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
