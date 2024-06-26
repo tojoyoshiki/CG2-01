@@ -8,6 +8,7 @@
 #include <dxgidebug.h>
 #include <dxcapi.h>
 #include <math.h>
+#include "externals/DirectXTex/DirectXTex.h"
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
@@ -36,27 +37,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
-void UploadTextureData(ID3D12Resource* texture,const DirectX::ScrathImage& mipImages,
-	ID3D12 Device* device, ID3D12GraphicsCommandList* commandList) {
+void UploadTextureData(ID3D12Resource* texture, const DirectX::ScratchImage& mipImages)
+{
+	const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
 
-	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-	DirectX::PrepareUpLoad(device, mipimages, GetImages(), mipimages.GetImageCount(),
-		mipImages.GetMetadata(), subresources);
-	uint64_t intermediateSize = GetReqouiredIntermediateSize(texture, 0, UINT(subresource.size()));
-	ID3D12Resource* intermediateResourceCreateBufferResource(device, intermediateSize);
-	UpdaateSubresources(commandList, texture, intermediateResource, 0, 0, UINT(subresources.Size()),
-		subresources.data());
-
-	D3D12_RESOURCE_BARRIER barrier{};
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	barrier.Transition.pResource = texture;
-	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	barrier.Transition.StateBefore = D3D12_Resource_STATE_COPY_DEST;
-	barrier.Transition.StateAfter = D3D12_Resource_STATE_GENERIC_READ;
-	commandList->ResourceBarrier(1, &barrier);
-
-	return intermediateResource;
+	for (size_t mipLevel = 0; mipLevel < metadata.mipLevels; ++mipLevel) {
+		const DirectX::Image* img = mipImages.GetImage(mipLevel, 0, 0);
+		HRESULT hr = texture->WriteToSubresource(
+			UINT(mipLevel),
+			nullptr,
+			img->pixels,
+			UINT(img->rowPitch),
+			UINT(img->slicePitch)
+		);
+		assert(SUCCEEDED(hr));
+	}
 }
 
 std::wstring ConvertString(const std::string& str) {
@@ -661,6 +656,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptionRootSignature.Flags =
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
+	D3D12_DESCRIPTOR_RANGE descriptorRange[1] = {};
+	descriptorRange[0].BaseShaderRegister = 0;
+	descriptorRange[0].NumDescriptors = 1;
+	descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+	descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
 	D3D12_ROOT_PARAMETER rootParameters[3] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
@@ -672,7 +673,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	rootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	rootParameters[2].DescriptorTable.pDescriptorRanges = descriptorRange;
 	rootParameters[2].DescriptorTable.NumDescriptorRanges = _countof(descriptorRange);
-	.30
 
 	descriptionRootSignature.pParameters = rootParameters;
 	descriptionRootSignature.NumParameters = _countof(rootParameters);
@@ -764,7 +764,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
 	vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };
 
-
 	//DirectX::ScratchImage mipImages = LoadTeture("resources/uvChecker.png");
 	//const DirectX::TexMatadata& metadata = mipImages.GetMetadata();
 	//ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
@@ -781,7 +780,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//textureSrvHandleCPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
 	//textureSrvHandleGPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
 	//device->CreateShaderResourceView(textureResource, &srvDesc, textureSrvHandleCPU);
-
 
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = kClientWidth;
@@ -961,19 +959,3 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	return 0;
 }
-
-
-//D3D12_RESOURCE_DESC resourceDesc{};
-//resourceDesc.Width = UINT(metadata.width);
-//resourceDesc.Height = UINT(metadata.height);
-//resourceDesc.MipLevels = UINT16(metadata.miplevels);
-//resourceDesc.DepthOrArraySize = UINT16(metadata.arraySize);
-//resourceDesc.Format = metadata.fomat;
-//resourceDesc.SampleDesc.Count = 1;
-//resourceDesc.Dimension = D3D12_RESOUCE_DIMENSION(metadata.dimension);
-
-//D3D12_HEAP_PROPERTIES heapProperties{};
-//heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
-//heapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;
-//heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPETY_WRITE_BACK;
-//heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
