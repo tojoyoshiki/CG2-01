@@ -387,6 +387,24 @@ ID3D12DescriptorHeap* CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTO
 //	DirectX::ScratchImage mipImages{};
 //}
 
+ID3D12Resource* CreateDepthStencilTextureResource(ID3D12Device* device,
+	int32_t width, int32_t height) {
+
+	D3D12_RESOURCE_DESC resourceDesc{};
+	resourceDesc.Width = width;
+	resourceDesc.Height = height;
+	resourceDesc.MipLevels = 1;
+	resourceDesc.DepthOrArraySize = 1;
+	resourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	resourceDesc.SampleDesc.Count = 1;
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_HEAP_PROPERTIES heapPropeties{};
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+}
+
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
@@ -983,3 +1001,56 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 //descriptionSignature.pStaticSamplers = staticSamplers;
 //descriptionSignature.NumStaticSamplers = _countof(staticSamplers);
 
+//vertexData[3].position = { -0.5f,-0.5f,0.5f,1.0f };
+//vertexData[3].texcoord = { 0.0f,1.0f };
+//
+//vertexData[4].position = { 0.0f,0.0f,0.0f,1.0f };
+//vertexData[4].texcoord = { 0.5f,0.0f };
+//
+//vertexData[5].position = { 0.5f,-0.5f,-0.5f,1.0f };
+//vertexData[5].texcoord = { 1.0f,1.0f };
+
+//D3D12_CLEAR_VaLUE depthClearValue{};
+//depthClearvalue.DepthStencil.Depth = 1.0f;
+//depthClearvalue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+//ID3D12Resource* resource = nullptr;
+//HRESULT hr = device->CreateComittedResource(
+//	&heapProperties,
+//	D3D12_HEAP_FLAG_NONE,
+//	&resourceDesc,
+//	D3D12_RESOURCE_STATE_DEPTH_WRITE,
+//	&depthClearValue,
+//	IID_PPV_ARGS(&resource)
+//);
+//assert(SUCCEEDED(hr));
+//ID3D12Resource* depthStencilResource =
+//CreateDepthStencilTextureResource(device, kClientWidth, kClientHeight);
+
+//ID3D12DescriptorHeap* dsvDescriptorHeap = 
+//CreateDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
+//D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+//dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+//dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+//device->CreateDepthStensilView(depthStencilResource,
+//	&dsvDesc, dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+//D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
+//depthStencilDesc.DepthEnable = true;
+//depthstencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+//depthstencilDesc.DepthFunc = D3D12_COMPARISION_FUNC_LESS_EQUAL;
+//
+//graphicsPipelineStateDesc.depthStencilState = depthStencilDesc;
+//graphicsPipelineStateDesc.DSVFormat = DXGI_FORMA_D24_UNORM_S8_UINT;
+
+//bool DepthFunc(Float currZ, float prevZ) {
+//	return currZ <= prevZ;
+//}
+//if (DepthFunc(currZ, prevZ)) {
+//
+//}
+
+//D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = 
+//dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+//commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
+//commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
