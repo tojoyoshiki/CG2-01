@@ -705,11 +705,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	assert(SUCCEEDED(hr));
 	//02_02_30
 
-	D3D12_INPUT_ELEMENT_DESC inputElementDescs[1] = {};
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[2] = {};
 	inputElementDescs[0].SemanticName = "POSITION";
 	inputElementDescs[0].SemanticIndex = 0;
 	inputElementDescs[0].Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 	inputElementDescs[0].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+	inputElementDescs[1].SemanticName = "TEXCOORD";
+	inputElementDescs[1].SemanticIndex = 0;
+	inputElementDescs[1].Format = DXGI_FORMAT_R32G32_FLOAT;
+	inputElementDescs[1].AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
 	D3D12_INPUT_LAYOUT_DESC inputLayoutDesc{};
 	inputLayoutDesc.pInputElementDescs = inputElementDescs;
 	inputLayoutDesc.NumElements = _countof(inputElementDescs);
@@ -764,22 +768,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
 	vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };
 
-	//DirectX::ScratchImage mipImages = LoadTeture("resources/uvChecker.png");
-	//const DirectX::TexMatadata& metadata = mipImages.GetMetadata();
-	//ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
-	//UploadTextureData(textureResource, mipImages);
-
-	//D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	//srvDesc.Format = metadata.format;
-	//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	//srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
-
-	//D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	//D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	//textureSrvHandleCPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
-	//textureSrvHandleGPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
-	//device->CreateShaderResourceView(textureResource, &srvDesc, textureSrvHandleCPU);
 
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = kClientWidth;
@@ -959,3 +947,39 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	return 0;
 }
+
+	//DirectX::ScratchImage mipImages = LoadTeture("resources/uvChecker.png");
+	//const DirectX::TexMatadata& metadata = mipImages.GetMetadata();
+	//ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
+	//UploadTextureData(textureResource, mipImages);
+
+	//D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	//srvDesc.Format = metadata.format;
+	//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	//srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
+
+	//D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	//D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	//textureSrvHandleCPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
+	//textureSrvHandleGPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
+	//device->CreateShaderResourceView(textureResource, &srvDesc, textureSrvHandleCPU);
+
+//D12D3_DESCRIPTOR_RANGE descriptorRange[1] = {};
+//descriptorRange[0].BaseShaderRegister = 0;
+//descriptorRange[0].NumDescriptors = 1;
+//descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+//descriptorRange[0].OffsetInDescriptorsFromTanbleStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+//D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
+//staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+//staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+//staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+//staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+//staticSamplers[0].ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+//staticSamplers[0].MaxLOD = D3D12_FLOAT32_MAX;
+//staticSamplers[0].ShaderRegister = 0;
+//staticSamplers[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+//descriptionSignature.pStaticSamplers = staticSamplers;
+//descriptionSignature.NumStaticSamplers = _countof(staticSamplers);
+
