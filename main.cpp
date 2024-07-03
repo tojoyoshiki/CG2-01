@@ -770,9 +770,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			ImGui::ShowDemoWindow();
 
-			ImGui::Begin("Change color");
-			ImGui::ColorEdit4("RGB", &materialData->x);
-			ImGui::End();
+		//	ImGui::Begin("Change color");
+			//ImGui::ColorEdit4("RGB", &materialData->x);
+		//	ImGui::End();
 
 			ImGui::Render();
 
