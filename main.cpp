@@ -768,7 +768,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexData[1] = { 0.0f,0.5f,0.0f,1.0f };
 	vertexData[2] = { 0.5f,-0.5f,0.0f,1.0f };
 
-
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = kClientWidth;
 	viewport.Height = kClientHeight;
@@ -948,7 +947,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	return 0;
 }
 
-	//DirectX::ScratchImage mipImages = LoadTeture("resources/uvChecker.png");
+	//DirectX::ScratchImage mipImages = LoadTeture("Resources/uvChecker.png");
 	//const DirectX::TexMatadata& metadata = mipImages.GetMetadata();
 	//ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
 	//UploadTextureData(textureResource, mipImages);
@@ -983,3 +982,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 //descriptionSignature.pStaticSamplers = staticSamplers;
 //descriptionSignature.NumStaticSamplers = _countof(staticSamplers);
 
+DirectX::ScratchImage LoadTexture(const std::stringstream& filePath) {
+	DirectX::ScratchImage image{};
+	std::wstring filepathW = ConvertString(filePath);
+	HRESULT hr = DirectX::LoadFromWCFile(filePathW.c_str(),
+		DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+	assert(SUCCEEDED(hr));
+
+	DirectX::ScratchImage mipImages{};
+	hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(),
+		image.GetMetadata(), DirectX::TEX_FILTER_SRGB, 0, mipImages);
+	assert(SUCCEEDED(hr));
+
+	return mipImages;
+}
