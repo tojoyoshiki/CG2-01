@@ -1,6 +1,9 @@
 #include <Windows.h>
 #include <cstdint>
 #include <string>
+#include <sstream>
+#include <locale>
+#include <codecvt>
 #include <format>
 #include <d3d12.h>
 #include <dxgi1_6.h>
@@ -68,18 +71,25 @@ std::wstring ConvertString(const std::string& str) {
 	return result;
 }
 
-std::string ConvertString(const std::wstring& str) {
-	if (str.empty()) {
-		return std::string();
-	}
+//std::string ConvertString(const std::wstring& str) {
+//	if (str.empty()) {
+//		return std::string();
+//	}
 
-	auto sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), NULL, 0, NULL, NULL);
-	if (sizeNeeded == 0) {
-		return std::string();
+// Convert std::string to std::wstring
+std::wstring ConvertString(const std::string& str) {
+	if (str.empty()) {
+		return std::wstring();
 	}
-	std::string result(sizeNeeded, 0);
-	WideCharToMultiByte(CP_UTF8, 0, str.data(), static_cast<int>(str.size()), result.data(), sizeNeeded, NULL, NULL);
-	return result;
+	int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), NULL, 0);
+	std::wstring wstr(sizeNeeded, 0);
+	MultiByteToWideChar(CP_UTF8, 0, str.c_str(), static_cast<int>(str.size()), &wstr[0], sizeNeeded);
+	return wstr;
+}
+
+// Convert std::stringstream to std::wstring
+std::wstring ConvertString(const std::stringstream& sstream) {
+	return ConvertString(sstream.str());
 }
 
 void Log(const std::string& message) {
@@ -378,14 +388,25 @@ ID3D12DescriptorHeap* CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTO
 	return descriptorHeap;
 }
 
-//DirectX::ScratchImage LoadTexture(const std::string& filePath) {
-//	DirectX::ScrathImage image{};
-//	std::wstring filePathW = ConvertString(filePath);
-//	HRESULT hr = DirectX::LoadFrowINFile(filePath.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+//DirectX::ScratchImage LoadTexture(const std::stringstream& filePath) {
+//	DirectX::ScratchImage image{};
+//	std::wstring filepathW = ConvertString(filePath);
+//	HRESULT hr = DirectX::LoadFromWICFile(filepathW.c_str(),
+//		DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
 //	assert(SUCCEEDED(hr));
 //
 //	DirectX::ScratchImage mipImages{};
+//	hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(),
+//		image.GetMetadata(), DirectX::TEX_FILTER_SRGB, 0, mipImages);
+//	assert(SUCCEEDED(hr));
+//
+//	return mipImages;
 //}
+
+DirectX::ScratchImage mipImages = LoadTeture("Resources/uvChecker.png");
+const DirectX::TexMatadata& metadata = mipImages.GetMetadata();
+ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
+UploadTextureData(textureResource, mipImages);
 
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
@@ -947,22 +968,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	return 0;
 }
 
-	//DirectX::ScratchImage mipImages = LoadTeture("Resources/uvChecker.png");
-	//const DirectX::TexMatadata& metadata = mipImages.GetMetadata();
-	//ID3D12Resource* textureResource = CreateTextureResource(device, metadata);
-	//UploadTextureData(textureResource, mipImages);
 
-	//D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-	//srvDesc.Format = metadata.format;
-	//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-	//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-	//srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
+//D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+//srvDesc.Format = metadata.format;
+//srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+//srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+//srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
 
-	//D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	//D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	//textureSrvHandleCPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
-	//textureSrvHandleGPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
-	//device->CreateShaderResourceView(textureResource, &srvDesc, textureSrvHandleCPU);
+//D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+//D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+//textureSrvHandleCPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
+//textureSrvHandleGPU.ptr += device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTORHEAP_TYPE_CBV_SRV_UAV);
+//device->CreateShaderResourceView(textureResource, &srvDesc, textureSrvHandleCPU);
 
 //D12D3_DESCRIPTOR_RANGE descriptorRange[1] = {};
 //descriptorRange[0].BaseShaderRegister = 0;
@@ -982,17 +999,3 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 //descriptionSignature.pStaticSamplers = staticSamplers;
 //descriptionSignature.NumStaticSamplers = _countof(staticSamplers);
 
-DirectX::ScratchImage LoadTexture(const std::stringstream& filePath) {
-	DirectX::ScratchImage image{};
-	std::wstring filepathW = ConvertString(filePath);
-	HRESULT hr = DirectX::LoadFromWCFile(filePathW.c_str(),
-		DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
-	assert(SUCCEEDED(hr));
-
-	DirectX::ScratchImage mipImages{};
-	hr = DirectX::GenerateMipMaps(image.GetImages(), image.GetImageCount(),
-		image.GetMetadata(), DirectX::TEX_FILTER_SRGB, 0, mipImages);
-	assert(SUCCEEDED(hr));
-
-	return mipImages;
-}
