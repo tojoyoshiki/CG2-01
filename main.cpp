@@ -373,14 +373,30 @@ float cot(float theta) {
 	return 1 / std::tanf(theta);
 }
 
-Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip) {
+Matrix4x4 MakePerspectiveFovMatrix(float fovY, float aspectRatio, float nearClip, float farClip)
+{
+	Matrix4x4 result = { 0 };
 
-	Matrix4x4 result = {};
-	result.mat[0][0] = 1.0f / aspectRatio * cot(fovY / 2);
-	result.mat[1][1] = cot(fovY / 2);
+	result.mat[0][0] = (1 / aspectRatio) / tanf(fovY / 2);
+	result.mat[0][1] = 0;
+	result.mat[0][2] = 0;
+	result.mat[0][3] = 0;
+
+	result.mat[1][0] = 0;
+	result.mat[1][1] = 1 / tanf(fovY / 2);
+	result.mat[1][2] = 0;
+	result.mat[1][3] = 0;
+
+	result.mat[2][0] = 0;
+	result.mat[2][1] = 0;
 	result.mat[2][2] = farClip / (farClip - nearClip);
-	result.mat[2][3] = 1.0f;
-	result.mat[3][2] = (-nearClip + farClip) / (farClip - nearClip);
+	result.mat[2][3] = 1;
+
+	result.mat[3][0] = 0;
+	result.mat[3][1] = 0;
+	result.mat[3][2] = (-nearClip * farClip) / (farClip - nearClip);
+	result.mat[3][3] = 0;
+
 	return result;
 }
 
@@ -449,6 +465,37 @@ DirectX::ScratchImage LoadTexture(const std::string& filePath) {
 	assert(SUCCEEDED(hr));
 
 	return mipImages;
+}
+
+ID3D12Resource* CreateDepthStencilTextureResource(ID3D12Device* device,
+	int32_t width, int32_t height) {
+	D3D12_RESOURCE_DESC resourceDesc{};
+	resourceDesc.Width = width;
+	resourceDesc.Height = height;
+	resourceDesc.DepthOrArraySize = 1;
+	resourceDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	resourceDesc.SampleDesc.Count = 1;
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_HEAP_PROPERTIES heapProperties{};
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+
+	D3D12_CLEAR_VALUE depthClearValue{};
+	depthClearValue.DepthStencil.Depth = 1.0f;
+	depthClearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+	ID3D12Resource* resource = nullptr;
+	HRESULT hr = device->CreateCommittedResource(
+		&heapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&resourceDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthClearValue,
+		IID_PPV_ARGS(&resource));
+	assert(SUCCEEDED(hr));
+
+	return resource;
 }
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -819,6 +866,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	graphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	graphicsPipelineStateDesc.SampleDesc.Count = 1;
 	graphicsPipelineStateDesc.SampleMask = D3D12_DEFAULT_SAMPLE_MASK;
+
+	D3D12_DEPTH_STENCIL_DESC depthStencilDesc{};
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	graphicsPipelineStateDesc.DepthStencilState = depthStencilDesc;
+	graphicsPipelineStateDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
 	ID3D12PipelineState* graphicsPipelineState = nullptr;
 	hr = device->CreateGraphicsPipelineState(&graphicsPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
@@ -839,16 +894,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	UploadTextureData(textureResource, mipImages);
 
 
-
-
-
 	D3D12_VERTEX_BUFFER_VIEW vertexBufferView{};
 	vertexBufferView.BufferLocation = vertexResource->GetGPUVirtualAddress();
 	vertexBufferView.SizeInBytes = sizeof(VertexData) * 6;
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
 
 	VertexData* vertexData = nullptr;
-	vertexResource->Map(0, nullptr, 
+	vertexResource->Map(0, nullptr,
 		reinterpret_cast<void**>(&vertexData));
 
 	vertexData[0].position = { -0.5f,-0.5f,0.0f,1.0f };
@@ -859,6 +911,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	vertexData[2].position = { 0.5f,-0.5f,0.0f,1.0f };
 	vertexData[2].texcoord = { 1.0f,1.0f };
+
+	vertexData[3].position = { -0.5f,-0.5f,0.5f,1.0f };
+	vertexData[3].texcoord = { 0.0f,1.0f };
+
+	vertexData[4].position = { 0.0f,0.0f,0.0f,1.0f };
+	vertexData[4].texcoord = { 0.5f,0.0f };
+
+	vertexData[5].position = { 0.5f,-0.5f,-0.5f,1.0f };
+	vertexData[5].texcoord = { 1.0f,1.0f };
+
 
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = kClientWidth;
@@ -872,7 +934,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	scissorRect.right = kClientWidth;
 	scissorRect.top = 0;
 	scissorRect.bottom = kClientHeight;
-
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
 	srvDesc.Format = metadata.format;
@@ -890,6 +951,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	device->CreateShaderResourceView(textureResource, &srvDesc, textureSrvHandleCPU);
 
+	ID3D12Resource* depthStencilResource = CreateDepthStencilTextureResource(
+		device, kClientWidth, kClientHeight);
+
+	ID3D12DescriptorHeap* dsvDescriptorHeap =
+		CreateDescriptorHeap(device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	device->CreateDepthStencilView(depthStencilResource,
+		&dsvDesc, dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -912,7 +983,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			// ゲームの処理
 
-			/*transform.rotate.y += 0.03f;*/
+			transform.rotate.y += 0.03f;
 			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 			Matrix4x4 cametaMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
 			Matrix4x4 viewMatrix = Inverse(cametaMatrix);
@@ -946,15 +1017,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// TransitionBarrierを張る
 			commandList->ResourceBarrier(1, &barrier);
 
+			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle =
+				dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+			commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex],
+				false, &dsvHandle);
+
 			// 描画先のRTVを設定する
-			commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
+			//commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
 			// 指定した色で画面全体をクリアする
 			float clearColor[] = { 0.1f,0.25f,0.5f,1.0f }; // 青っぽい色。RGBAの略
 			ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap };
 
 			commandList->SetDescriptorHeaps(1, descriptorHeaps);
 			commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
-
+			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH,
+				1.0f, 0, 0, nullptr);
 			commandList->RSSetViewports(1, &viewport);
 			commandList->RSSetScissorRects(1, &scissorRect);
 			commandList->SetGraphicsRootSignature(rootSignature);
@@ -964,7 +1041,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 			commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
-			commandList->DrawInstanced(3, 1, 0, 0);
+			commandList->DrawInstanced(6, 1, 0, 0);
 
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 			// 画面に描く処理はすべて終わり、画面に映すので、状態を遷移
@@ -1046,6 +1123,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	srvDescriptorHeap->Release();
 
 	materialResource->Release();
+
 	// リソースリークチェック
 	IDXGIDebug1* debug;
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
@@ -1060,7 +1138,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	return 0;
 }
-
 
 //D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
 //srvDesc.Format = metadata.format;
@@ -1079,6 +1156,3 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 //descriptorRange[0].NumDescriptors = 1;
 //descriptorRange[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
 //descriptorRange[0].OffsetInDescriptorsFromTanbleStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-
-
