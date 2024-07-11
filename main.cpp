@@ -966,6 +966,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// 解放処理
 	CloseHandle(fenceEvent);
+
+	textureResource->Release();
+
 	fence->Release();
 	rtvDescriptorHeap->Release();
 	swapChainResources[0]->Release();
