@@ -1190,14 +1190,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			ImGui::ShowDemoWindow();
 
-
 			//ImGuiの内部コマンド
 			ImGui::Render();
-
-
 			//　これから書き込みバックバッファのインデックスを取得
 			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
-
 
 			//TransitionBarrierの設定
 			D3D12_RESOURCE_BARRIER barrier{};
