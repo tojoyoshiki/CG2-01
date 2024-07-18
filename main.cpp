@@ -555,7 +555,6 @@ ID3D12Resource* CrateTextureResource(ID3D12Device* device, const DirectX::TexMet
 	resourceDesc.SampleDesc.Count = 1;//サンプリングカウント(1固定)
 	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension);// textureの次元数
 
-
 	//利用するHeapの設定
 	D3D12_HEAP_PROPERTIES heapProperties{};
 	heapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;
