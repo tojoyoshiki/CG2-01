@@ -22,7 +22,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 #pragma comment(lib,"dxguid.lib")
 
-
 #pragma comment(lib,"dxcompiler.lib")
 
 std::wstring ConvertString(const std::string& str) {
@@ -235,7 +234,6 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Ve
 	resultY.m[3][2] = 0.0f;
 	resultY.m[3][3] = 1.0f;
 
-
 	Matrix4x4 resultZ{};
 
 	resultZ.m[0][0] = std::cos(rotate.z);
@@ -255,9 +253,7 @@ Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Ve
 	resultZ.m[3][2] = 0.0f;
 	resultZ.m[3][3] = 1.0f;
 
-
 	Matrix4x4 rotateXYZ = Multiply(resultX, Multiply(resultY, resultZ));
-
 
 	Matrix4x4 result;
 
@@ -308,7 +304,6 @@ Matrix4x4 Inverse(const Matrix4x4& m) {
 		+ m.m[0][3] * m.m[1][2] * m.m[2][1] * m.m[3][0]
 		+ m.m[0][2] * m.m[1][1] * m.m[2][3] * m.m[3][0]
 		+ m.m[0][1] * m.m[1][3] * m.m[2][2] * m.m[3][0];
-
 
 	Matrix4x4 result{};
 	result.m[0][0] = (m.m[1][1] * m.m[2][2] * m.m[3][3]
@@ -1256,16 +1251,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 
 
-			//画面に描く処理はすべて終わり、画面に映すので、状況をそうい
-			//今回はResourceTargetからPresentにする
 			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 			//TransitionBarrierを張る
 			commandList->ResourceBarrier(1, &barrier);
-
-
-
-			//コマンドリストの内容を確定させる。全てのコマンドを積んでからclearする
 			hr = commandList->Close();
 			assert(SUCCEEDED(hr));
 
