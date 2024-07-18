@@ -1310,7 +1310,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//実際のcommandListのImGui描画コマンドを挟む
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 
-
 			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
 			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 			//TransitionBarrierを張る
