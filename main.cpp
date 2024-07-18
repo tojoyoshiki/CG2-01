@@ -1107,28 +1107,28 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	//leftTop
-	vertexData[0].position = { -0.5f, -0.5f,0.0f,1.0f };
-	vertexData[0].texcoord = { 0.0f,1.0f };
+	//vertexData[0].position = { -0.5f, -0.5f,0.0f,1.0f };
+	//vertexData[0].texcoord = { 0.0f,1.0f };
 
-	//Top
-	vertexData[1].position = { 0.0f, 0.5f,0.0f,1.0f };
-	vertexData[1].texcoord = { 0.5f,0.0f };
+	////Top
+	//vertexData[1].position = { 0.0f, 0.5f,0.0f,1.0f };
+	//vertexData[1].texcoord = { 0.5f,0.0f };
 
-	//rightBottom
-	vertexData[2].position = { 0.5f, -0.5f,0.0f,1.0f };
-	vertexData[2].texcoord = { 1.0f,1.0f };
+	////rightBottom
+	//vertexData[2].position = { 0.5f, -0.5f,0.0f,1.0f };
+	//vertexData[2].texcoord = { 1.0f,1.0f };
 
-	//leftTop
-	vertexData[3].position = { -0.5f, -0.5f,0.5f,1.0f };
-	vertexData[3].texcoord = { 0.0f,1.0f };
+	////leftTop
+	//vertexData[3].position = { -0.5f, -0.5f,0.5f,1.0f };
+	//vertexData[3].texcoord = { 0.0f,1.0f };
 
-	//Top
-	vertexData[4].position = { 0.0f, 0.0f,0.0f,1.0f };
-	vertexData[4].texcoord = { 0.5f,0.0f };
+	////Top
+	//vertexData[4].position = { 0.0f, 0.0f,0.0f,1.0f };
+	//vertexData[4].texcoord = { 0.5f,0.0f };
 
-	//rightBottom
-	vertexData[5].position = { 0.5f, -0.5f,-0.5f,1.0f };
-	vertexData[5].texcoord = { 1.0f,1.0f };
+	////rightBottom
+	//vertexData[5].position = { 0.5f, -0.5f,-0.5f,1.0f };
+	//vertexData[5].texcoord = { 1.0f,1.0f };
 
 	//Spricte
 	ID3D12Resource* vertexResourceSprite = CreateBufferResource(device, sizeof(VertexData) * 6);
