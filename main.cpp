@@ -5,7 +5,8 @@
 #include<d3d12.h>
 #include<dxgi1_6.h>
 #include<cassert>
-
+#define _USE_MATH_DEFINES
+#include <math.h>
 #include <dxgidebug.h>
 
 #include <dxcapi.h>
@@ -131,7 +132,7 @@ struct Vector4 {
 	float x;
 	float y;
 	float z;
-	float s;
+	float w;
 };
 
 struct Matrix4x4 {
@@ -1030,6 +1031,72 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	vertexBufferView.StrideInBytes = sizeof(VertexData);
 
+	//頂点リソースにデータを書き込む
+	VertexData* vertexData = nullptr;
+	//書き込むためのアドレスを取得
+	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
+	const uint32_t kSubdivisiont = 16;  // 分割数
+
+	const float kLonEvery = 2.0f * float(M_PI) / kSubdivisiont;  // 経度分割1つ分の角度
+	const float kLatEvery = float(M_PI) / kSubdivisiont;  // 緯度分割1つ分の角度
+
+	// 緯度の方向に分割　-π/2 ~ π/2
+	for (uint32_t latIndex = 0; latIndex < kSubdivisiont; ++latIndex) {
+		float lat = -float(M_PI) / 2.0f + kLatEvery * latIndex; // 現在の緯度
+
+		// 経度の方向に分割0 ~ 2π
+		for (uint32_t lonIndex = 0; lonIndex < kSubdivisiont; ++lonIndex)
+		{
+			float v;
+			float u;
+
+			u = float(lonIndex) / float(kSubdivisiont);
+			v = 1.0f - float(latIndex) / float(kSubdivisiont);
+
+			uint32_t start = (latIndex * kSubdivisiont + lonIndex) * 6;
+			float lon = lonIndex * kLonEvery;
+
+			//頂点にデータを入力する。基準点a
+			//a
+			vertexData[start].position.x = cos(lat) * cos(lon);
+			vertexData[start].position.y = sin(lat);
+			vertexData[start].position.z = cos(lat) * sin(lon);
+			vertexData[start].position.w = 1.0f;
+			vertexData[start].texcoord = { u,v };
+			//b
+			vertexData[start + 2].position.x = cos(lat) * cos(lon + kLonEvery);
+			vertexData[start + 2].position.y = sin(lat);
+			vertexData[start + 2].position.z = cos(lat) * sin(lon + kLonEvery);
+			vertexData[start + 2].position.w = 1.0f;
+			vertexData[start + 2].texcoord = { u + 1.0f / kSubdivisiont,v };
+			//c
+			vertexData[start + 1].position.x = cos(lat + kLatEvery) * cos(lon);
+			vertexData[start + 1].position.y = sin(lat + kLatEvery);
+			vertexData[start + 1].position.z = cos(lat + kLatEvery) * sin(lon);
+			vertexData[start + 1].position.w = 1.0f;
+			vertexData[start + 1].texcoord = { u ,v - 1.0f / kSubdivisiont };
+			//d
+			vertexData[start + 3].position.x = cos(lat + kLatEvery) * cos(lon + kLonEvery);
+			vertexData[start + 3].position.y = sin(lat + kLatEvery);
+			vertexData[start + 3].position.z = cos(lat + kLatEvery) * sin(lon + kLonEvery);
+			vertexData[start + 3].position.w = 1.0f;
+			vertexData[start + 3].texcoord = { u + 1.0f / kSubdivisiont ,v - 1.0f / kSubdivisiont };
+			//b2
+			vertexData[start + 4].position.x = cos(lat) * cos(lon + kLonEvery);
+			vertexData[start + 4].position.y = sin(lat);
+			vertexData[start + 4].position.z = cos(lat) * sin(lon + kLonEvery);
+			vertexData[start + 4].position.w = 1.0f;
+			vertexData[start + 4].texcoord = { u + 1.0f / kSubdivisiont,v };
+			//c2
+			vertexData[start + 5].position.x = cos(lat + kLatEvery) * cos(lon);
+			vertexData[start + 5].position.y = sin(lat + kLatEvery);
+			vertexData[start + 5].position.z = cos(lat + kLatEvery) * sin(lon);
+			vertexData[start + 5].position.w = 1.0f;
+			vertexData[start + 5].texcoord = { u,v - 1.0f / kSubdivisiont };
+		}
+	}
+
+
 	ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(Matrix4x4));
 
 	Matrix4x4* wvpDate = nullptr;
@@ -1037,8 +1104,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpDate));
 
 	*wvpDate = MakeIdentity4x4();
-
-	VertexData* vertexData = nullptr;
 
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexData));
 	//leftTop
@@ -1219,8 +1284,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 			commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
 
-
-
 			commandList->RSSetViewports(1, &viewport);
 			commandList->RSSetScissorRects(1, &scissorRect);
 
@@ -1230,18 +1293,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress()); //rootParameterの配列の0番目 [0]
-
+			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 
 			commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
 
-
-
 			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-			commandList->DrawInstanced(6, 1, 0, 0);//だいたい最後
+			commandList->DrawInstanced(kSubdivisiont, 1, 0, 0);
 
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);
 			commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
