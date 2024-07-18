@@ -1197,32 +1197,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			ImGui::ShowDemoWindow();
 
-			ImGui::Text("ImGuiText");
-			ImGui::Text("Traiangle");
-			ImGui::InputFloat3("Material", *inputMaterial);
-			ImGui::SliderFloat3("SliderMaterial", *inputMaterial, 0.0f, 1.0f);
-
-			ImGui::InputFloat3("Vertex", *inputTransform);
-			ImGui::SliderFloat3("SliderVertex", *inputTransform, -5.0f, 5.0f);
-
-			ImGui::InputFloat3("Rotate", *inputRotate);
-			ImGui::SliderFloat3("SliderRotate", *inputRotate, -10.0f, 10.0f);
-
-			ImGui::InputFloat3("Scale", *inputScale);
-			ImGui::SliderFloat3("SliderScale", *inputScale, 0.5f, 5.0f);
-
-
-			ImGui::Text("Sprite");
-			ImGui::InputFloat("SpriteX", &transformSprite.translate.x);
-			ImGui::SliderFloat("SliderSpriteX", &transformSprite.translate.x, 0.0f, 1000.0f);
-
-			ImGui::InputFloat("SpriteY", &transformSprite.translate.y);
-			ImGui::SliderFloat("SliderSpriteY", &transformSprite.translate.y, 0.0f, 600.0f);
-
-			ImGui::InputFloat("SpriteZ", &transformSprite.translate.z);
-			ImGui::SliderFloat("SliderSpriteZ", &transformSprite.translate.z, 0.0f, 0.0f);
-
-
+			
 			//ImGuiの内部コマンド
 			ImGui::Render();
 
