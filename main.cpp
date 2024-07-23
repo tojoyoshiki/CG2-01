@@ -73,6 +73,13 @@ struct DirectionalLight {
 	float intensity;
 };
 
+
+
+
+
+
+
+
 Matrix4x4 Inverse(const Matrix4x4& m) {
 	Matrix4x4 result;
 
@@ -401,8 +408,6 @@ IDxcBlob* CompileShader(const std::wstring& filePath,
 	IDxcCompiler3* dxcCompiler,
 	IDxcIncludeHandler* includeHandler)
 {
-
-
 	Log(ConvertString(std::format(L"Begin CompileShader,path:{},profile:{}\n", filePath, profile)));
 	IDxcBlobEncoding* shaderSource = nullptr;
 	HRESULT hr = dxcUtils->LoadFile(filePath.c_str(), nullptr, &shaderSource);
@@ -443,8 +448,6 @@ IDxcBlob* CompileShader(const std::wstring& filePath,
 	return shaderBlob;
 
 }
-
-
 ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t size) {
 	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
 	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -833,9 +836,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//2つ目を作る
 	device->CreateRenderTargetView(swapChainResource[1], &rtvDesc, rtvHandles[1]);
 
-
-
-
 	ID3D12Fence* fence = nullptr;
 	uint64_t fenceValue = 0;
 	hr = device->CreateFence(fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
@@ -1177,17 +1177,31 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//Light用のマテリアルリソースを作る
 	ID3D12Resource* materialResourceLight = CreateBufferResource(device, sizeof(DirectionalLight));
-
 	DirectionalLight* directionalLightData = nullptr;
-
 	materialResourceLight->Map(0, nullptr, reinterpret_cast<void**>(&directionalLightData));
-
-
 	directionalLightData->color = { 1.0f,1.0f,1.0f,1.0f };
 	directionalLightData->direction = { 0.0f,-1.0f,0.0f };
 	directionalLightData->intensity = 1.0f;
 
-
+	//Index用のリソース
+	ID3D12Resource* indexResourceSprite = CreateBufferResource(device, sizeof(uint32_t) * 6);
+	//IndexのViewを作る
+	D3D12_INDEX_BUFFER_VIEW indexBufferViewSprite{};
+	//リソースの先頭のアドレスから使う
+	indexBufferViewSprite.BufferLocation = indexResourceSprite->GetGPUVirtualAddress();
+	//使用するリソースのサイズはインデックス6つ分のサイズ
+	indexBufferViewSprite.SizeInBytes = sizeof(uint32_t) * 6;
+	//インデックスはuint32_tとする
+	indexBufferViewSprite.Format = DXGI_FORMAT_R32_UINT;
+	//インデックスリソースにデータを書き込む
+	uint32_t* indexDataSprite = nullptr;
+	indexResourceSprite->Map(0, nullptr, reinterpret_cast<void**>(&indexDataSprite));
+	indexDataSprite[0] = 0;
+	indexDataSprite[1] = 1;
+	indexDataSprite[2] = 2;
+	indexDataSprite[3] = 1;
+	indexDataSprite[4] = 3;
+	indexDataSprite[5] = 2;
 
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = kClientWidth;
@@ -1210,7 +1224,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ID3D12Resource* textureResource2 = CreateTextureResource(device, metadata2);
 	UploadTextureData(textureResource2, mipImage2);
 
-	//metaData2を基にSRVの設定( 2枚目 )
+	//metaData2を基にSRVの設定
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc2{};
 	srvDesc2.Format = metadata2.format;
 	srvDesc2.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -1229,7 +1243,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;//2Dテクスチャ
 	srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
-
 
 	// SRVを作成するDescriptorHeapの場所を決める
 	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -1260,7 +1273,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;//2dTexture
 	//DSVHeapの先頭にDSVを作る
 	device->CreateDepthStencilView(depthStencilResource, &dsvDesc, dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
 
 	//出力ウィンドウへの文字出力ループを抜ける
 	Log("Hello,DirectX!\n");
@@ -1299,6 +1311,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			// ColorEdit3を使用して色を選択
 			//ImGui::ColorEdit3("Color", &materialData->x);
 			ImGui::DragFloat3("CameraTransform", &cameraTransform.translate.x, 0.01f);
+			ImGui::DragFloat3("cameraRotate", &cameraTransform.rotate.x, 0.01f);
 			ImGui::Checkbox("useMonsterBall", &useMonsterBall);
 			ImGui::SliderFloat3("LightDirector", &directionalLightData->direction.x, -1.0f, 1.0f);
 
@@ -1372,13 +1385,17 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite->GetGPUVirtualAddress());
 
-
 			//Spriteの描画。変更が必要なものだけ変更する
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);//VBVを設定
 			//TransformationMatrixCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
 			//描画
 			commandList->DrawInstanced(6, 1, 0, 0);
+
+			//IBVを設定
+			commandList->IASetIndexBuffer(&indexBufferViewSprite);
+			//描画。6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
+			commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 			//実際のcommandListのImGuiの描画コマンドを積む
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
@@ -1413,8 +1430,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 			wvpData->World = worldMatrix;
 
-
-			//3次元的にする
 			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
 			Matrix4x4 viewMatrix = Inverse(cameraMatrix);
 			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
@@ -1422,24 +1437,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
 			wvpData->wvp = worldViewProjectionMatrix;
 
-
 		}
 
-
-
 	}//ゲームループ終わり
-
-
-
 
 	//ImGuiの終了処理
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
+	indexResourceSprite->Release();
 	materialResourceLight->Release();
 	materialResourceSprite->Release();
-	//directionalLightResource->Release();
 	textureResource2->Release();
 	vertexResourceSprite->Release();
 	transformationMatrixResourceSprite->Release();
