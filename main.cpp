@@ -402,6 +402,7 @@ IDxcBlob* CompileShader(const std::wstring& filePath,
 	IDxcIncludeHandler* includeHandler)
 {
 
+
 	Log(ConvertString(std::format(L"Begin CompileShader,path:{},profile:{}\n", filePath, profile)));
 	IDxcBlobEncoding* shaderSource = nullptr;
 	HRESULT hr = dxcUtils->LoadFile(filePath.c_str(), nullptr, &shaderSource);
@@ -1421,8 +1422,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
 			wvpData->wvp = worldViewProjectionMatrix;
 
+
 		}
+
+
+
 	}//ゲームループ終わり
+
+
+
 
 	//ImGuiの終了処理
 	ImGui_ImplDX12_Shutdown();
