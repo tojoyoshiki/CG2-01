@@ -133,8 +133,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="externals\DirectXTex\DirectXTex_Windows10_2022.vcxproj">
-      <Project>{fb3f52b5-bfe8-43fd-836f-363735dab738}</Project>
+    <ProjectReference Include="externals\DirectXTex\DirectXTex_Desktop_2022_Win10.vcxproj">
+      <Project>{371b9fa9-4c90-4ac6-a123-aced756d6c77}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
