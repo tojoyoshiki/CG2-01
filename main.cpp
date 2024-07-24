@@ -18,6 +18,7 @@
 
 #pragma comment(lib,"dxcompiler.lib")
 
+
 std::wstring ConvertString(const std::string& str) {
 	if (str.empty()) {
 		return std::wstring();
@@ -120,6 +121,335 @@ struct Vector4 {
 	float z;
 	float s;
 };
+
+struct Vector3 {
+	float x;
+	float y;
+	float z;
+};
+
+struct Matrix4x4 {
+	float m[4][4];
+};
+
+Matrix4x4 MakeIdentity4x4() {
+	Matrix4x4 result{};
+
+	result.m[0][0] = 1.0f;
+	result.m[0][1] = 0.0f;
+	result.m[0][2] = 0.0f;
+	result.m[0][3] = 0.0f;
+	result.m[1][0] = 0.0f;
+	result.m[1][1] = 1.0f;
+	result.m[1][2] = 0.0f;
+	result.m[1][3] = 0.0f;
+	result.m[2][0] = 0.0f;
+	result.m[2][1] = 0.0f;
+	result.m[2][2] = 1.0f;
+	result.m[2][3] = 0.0f;
+	result.m[3][0] = 0.0f;
+	result.m[3][1] = 0.0f;
+	result.m[3][2] = 0.0f;
+	result.m[3][3] = 1.0f;
+
+	return result;
+}
+
+struct Transform {
+	Vector3 scale;
+	Vector3 rotate;
+	Vector3 translate;
+};
+
+#pragma region Affine
+
+Matrix4x4 Multiply(Matrix4x4 m1, Matrix4x4 m2) {
+	Matrix4x4 result{};
+	result.m[0][0] = m1.m[0][0] * m2.m[0][0] + m1.m[0][1] * m2.m[1][0] + m1.m[0][2] * m2.m[2][0] + m1.m[0][3] * m2.m[3][0];
+	result.m[0][1] = m1.m[0][0] * m2.m[0][1] + m1.m[0][1] * m2.m[1][1] + m1.m[0][2] * m2.m[2][1] + m1.m[0][3] * m2.m[3][1];
+	result.m[0][2] = m1.m[0][0] * m2.m[0][2] + m1.m[0][1] * m2.m[1][2] + m1.m[0][2] * m2.m[2][2] + m1.m[0][3] * m2.m[3][2];
+	result.m[0][3] = m1.m[0][0] * m2.m[0][3] + m1.m[0][1] * m2.m[1][3] + m1.m[0][2] * m2.m[2][3] + m1.m[0][3] * m2.m[3][3];
+
+	result.m[1][0] = m1.m[1][0] * m2.m[0][0] + m1.m[1][1] * m2.m[1][0] + m1.m[1][2] * m2.m[2][0] + m1.m[1][3] * m2.m[3][0];
+	result.m[1][1] = m1.m[1][0] * m2.m[0][1] + m1.m[1][1] * m2.m[1][1] + m1.m[1][2] * m2.m[2][1] + m1.m[1][3] * m2.m[3][1];
+	result.m[1][2] = m1.m[1][0] * m2.m[0][2] + m1.m[1][1] * m2.m[1][2] + m1.m[1][2] * m2.m[2][2] + m1.m[1][3] * m2.m[3][2];
+	result.m[1][3] = m1.m[1][0] * m2.m[0][3] + m1.m[1][1] * m2.m[1][3] + m1.m[1][2] * m2.m[2][3] + m1.m[1][3] * m2.m[3][3];
+
+	result.m[2][0] = m1.m[2][0] * m2.m[0][0] + m1.m[2][1] * m2.m[1][0] + m1.m[2][2] * m2.m[2][0] + m1.m[2][3] * m2.m[3][0];
+	result.m[2][1] = m1.m[2][0] * m2.m[0][1] + m1.m[2][1] * m2.m[1][1] + m1.m[2][2] * m2.m[2][1] + m1.m[2][3] * m2.m[3][1];
+	result.m[2][2] = m1.m[2][0] * m2.m[0][2] + m1.m[2][1] * m2.m[1][2] + m1.m[2][2] * m2.m[2][2] + m1.m[2][3] * m2.m[3][2];
+	result.m[2][3] = m1.m[2][0] * m2.m[0][3] + m1.m[2][1] * m2.m[1][3] + m1.m[2][2] * m2.m[2][3] + m1.m[2][3] * m2.m[3][3];
+
+	result.m[3][0] = m1.m[3][0] * m2.m[0][0] + m1.m[3][1] * m2.m[1][0] + m1.m[3][2] * m2.m[2][0] + m1.m[3][3] * m2.m[3][0];
+	result.m[3][1] = m1.m[3][0] * m2.m[0][1] + m1.m[3][1] * m2.m[1][1] + m1.m[3][2] * m2.m[2][1] + m1.m[3][3] * m2.m[3][1];
+	result.m[3][2] = m1.m[3][0] * m2.m[0][2] + m1.m[3][1] * m2.m[1][2] + m1.m[3][2] * m2.m[2][2] + m1.m[3][3] * m2.m[3][2];
+	result.m[3][3] = m1.m[3][0] * m2.m[0][3] + m1.m[3][1] * m2.m[1][3] + m1.m[3][2] * m2.m[2][3] + m1.m[3][3] * m2.m[3][3];
+	return result;
+}
+
+Matrix4x4 MakeAffineMatrix(const Vector3& scale, const Vector3& rotate, const Vector3& translate) {
+
+	Matrix4x4 resultX{};
+
+	resultX.m[0][0] = 1.0f;
+	resultX.m[0][1] = 0.0f;
+	resultX.m[0][2] = 0.0f;
+	resultX.m[0][3] = 0.0f;
+	resultX.m[1][0] = 0.0f;
+	resultX.m[1][1] = std::cos(rotate.x);
+	resultX.m[1][2] = std::sin(rotate.x);
+	resultX.m[1][3] = 0.0f;
+	resultX.m[2][0] = 0.0f;
+	resultX.m[2][1] = -(std::sin(rotate.x));
+	resultX.m[2][2] = std::cos(rotate.x);
+	resultX.m[2][3] = 0.0f;
+	resultX.m[3][0] = 0.0f;
+	resultX.m[3][1] = 0.0f;
+	resultX.m[3][2] = 0.0f;
+	resultX.m[3][3] = 1.0f;
+
+
+	Matrix4x4 resultY{};
+
+	resultY.m[0][0] = std::cos(rotate.y);
+	resultY.m[0][1] = 0.0f;
+	resultY.m[0][2] = -(std::sin(rotate.y));
+	resultY.m[0][3] = 0.0f;
+	resultY.m[1][0] = 0.0f;
+	resultY.m[1][1] = 1.0f;
+	resultY.m[1][2] = 0.0f;
+	resultY.m[1][3] = 0.0f;
+	resultY.m[2][0] = std::sin(rotate.y);
+	resultY.m[2][1] = 0.0f;
+	resultY.m[2][2] = std::cos(rotate.y);
+	resultY.m[2][3] = 0.0f;
+	resultY.m[3][0] = 0.0f;
+	resultY.m[3][1] = 0.0f;
+	resultY.m[3][2] = 0.0f;
+	resultY.m[3][3] = 1.0f;
+
+
+	Matrix4x4 resultZ{};
+
+	resultZ.m[0][0] = std::cos(rotate.z);
+	resultZ.m[0][1] = std::sin(rotate.z);
+	resultZ.m[0][2] = 0.0f;
+	resultZ.m[0][3] = 0.0f;
+	resultZ.m[1][0] = -(std::sin(rotate.z));
+	resultZ.m[1][1] = std::cos(rotate.z);
+	resultZ.m[1][2] = 0.0f;
+	resultZ.m[1][3] = 0.0f;
+	resultZ.m[2][0] = 0.0f;
+	resultZ.m[2][1] = 0.0f;
+	resultZ.m[2][2] = 1.0f;
+	resultZ.m[2][3] = 0.0f;
+	resultZ.m[3][0] = 0.0f;
+	resultZ.m[3][1] = 0.0f;
+	resultZ.m[3][2] = 0.0f;
+	resultZ.m[3][3] = 1.0f;
+
+
+	Matrix4x4 rotateXYZ = Multiply(resultX, Multiply(resultY, resultZ));
+
+
+	Matrix4x4 result;
+
+	result.m[0][0] = scale.x * rotateXYZ.m[0][0];
+	result.m[0][1] = scale.x * rotateXYZ.m[0][1];
+	result.m[0][2] = scale.x * rotateXYZ.m[0][2];
+	result.m[0][3] = 0.0f;
+	result.m[1][0] = scale.y * rotateXYZ.m[1][0];
+	result.m[1][1] = scale.y * rotateXYZ.m[1][1];
+	result.m[1][2] = scale.y * rotateXYZ.m[1][2];
+	result.m[1][3] = 0.0f;
+	result.m[2][0] = scale.z * rotateXYZ.m[2][0];
+	result.m[2][1] = scale.z * rotateXYZ.m[2][1];
+	result.m[2][2] = scale.z * rotateXYZ.m[2][2];
+	result.m[2][3] = 0.0f;
+	result.m[3][0] = translate.x;
+	result.m[3][1] = translate.y;
+	result.m[3][2] = translate.z;
+	result.m[3][3] = 1.0f;
+
+	return result;
+}
+#pragma endregion
+
+#pragma region 逆数
+Matrix4x4 Inverse(const Matrix4x4& m) {
+	float A = m.m[0][0] * m.m[1][1] * m.m[2][2] * m.m[3][3]
+		+ m.m[0][0] * m.m[1][2] * m.m[2][3] * m.m[3][1]
+		+ m.m[0][0] * m.m[1][3] * m.m[2][1] * m.m[3][2]
+		- m.m[0][0] * m.m[1][3] * m.m[2][2] * m.m[3][1]
+		- m.m[0][0] * m.m[1][2] * m.m[2][1] * m.m[3][3]
+		- m.m[0][0] * m.m[1][1] * m.m[2][3] * m.m[3][2]
+		- m.m[0][1] * m.m[1][0] * m.m[2][2] * m.m[3][3]
+		- m.m[0][2] * m.m[1][0] * m.m[2][3] * m.m[3][1]
+		- m.m[0][3] * m.m[1][0] * m.m[2][1] * m.m[3][2]
+		+ m.m[0][3] * m.m[1][0] * m.m[2][2] * m.m[3][1]
+		+ m.m[0][2] * m.m[1][0] * m.m[2][1] * m.m[3][3]
+		+ m.m[0][1] * m.m[1][0] * m.m[2][3] * m.m[3][2]
+		+ m.m[0][1] * m.m[1][2] * m.m[2][0] * m.m[3][3]
+		+ m.m[0][2] * m.m[1][3] * m.m[2][0] * m.m[3][1]
+		+ m.m[0][3] * m.m[1][1] * m.m[2][0] * m.m[3][2]
+		- m.m[0][3] * m.m[1][2] * m.m[2][0] * m.m[3][1]
+		- m.m[0][2] * m.m[1][1] * m.m[2][0] * m.m[3][3]
+		- m.m[0][1] * m.m[1][3] * m.m[2][0] * m.m[3][2]
+		- m.m[0][1] * m.m[1][2] * m.m[2][3] * m.m[3][0]
+		- m.m[0][2] * m.m[1][3] * m.m[2][1] * m.m[3][0]
+		- m.m[0][3] * m.m[1][1] * m.m[2][2] * m.m[3][0]
+		+ m.m[0][3] * m.m[1][2] * m.m[2][1] * m.m[3][0]
+		+ m.m[0][2] * m.m[1][1] * m.m[2][3] * m.m[3][0]
+		+ m.m[0][1] * m.m[1][3] * m.m[2][2] * m.m[3][0];
+
+
+	Matrix4x4 result{};
+	result.m[0][0] = (m.m[1][1] * m.m[2][2] * m.m[3][3]
+		+ m.m[1][2] * m.m[2][3] * m.m[3][1]
+		+ m.m[1][3] * m.m[2][1] * m.m[3][2]
+		- m.m[1][3] * m.m[2][2] * m.m[3][1]
+		- m.m[1][2] * m.m[2][1] * m.m[3][3]
+		- m.m[1][1] * m.m[2][3] * m.m[3][2]) / A;
+
+	result.m[0][1] = (-m.m[0][1] * m.m[2][2] * m.m[3][3]
+		- m.m[0][2] * m.m[2][3] * m.m[3][1]
+		- m.m[0][3] * m.m[2][1] * m.m[3][2]
+		+ m.m[0][3] * m.m[2][2] * m.m[3][1]
+		+ m.m[0][2] * m.m[2][1] * m.m[3][3]
+		+ m.m[0][1] * m.m[2][3] * m.m[3][2]) / A;
+
+	result.m[0][2] = (m.m[0][1] * m.m[1][2] * m.m[3][3]
+		+ m.m[0][2] * m.m[1][3] * m.m[3][1]
+		+ m.m[0][3] * m.m[1][1] * m.m[3][2]
+		- m.m[0][3] * m.m[1][2] * m.m[3][1]
+		- m.m[0][2] * m.m[1][1] * m.m[3][3]
+		- m.m[0][1] * m.m[1][3] * m.m[3][2]) / A;
+
+	result.m[0][3] = (-m.m[0][1] * m.m[1][2] * m.m[2][3]
+		- m.m[0][2] * m.m[1][3] * m.m[2][1]
+		- m.m[0][3] * m.m[1][1] * m.m[2][2]
+		+ m.m[0][3] * m.m[1][2] * m.m[2][1]
+		+ m.m[0][2] * m.m[1][1] * m.m[2][3]
+		+ m.m[0][1] * m.m[1][3] * m.m[2][2]) / A;
+
+
+	result.m[1][0] = (-m.m[1][0] * m.m[2][2] * m.m[3][3]
+		- m.m[1][2] * m.m[2][3] * m.m[3][0]
+		- m.m[1][3] * m.m[2][0] * m.m[3][2]
+		+ m.m[1][3] * m.m[2][2] * m.m[3][0]
+		+ m.m[1][2] * m.m[2][0] * m.m[3][3]
+		+ m.m[1][0] * m.m[2][3] * m.m[3][2]) / A;
+
+	result.m[1][1] = (m.m[0][0] * m.m[2][2] * m.m[3][3]
+		+ m.m[0][2] * m.m[2][3] * m.m[3][0]
+		+ m.m[0][3] * m.m[2][0] * m.m[3][2]
+		- m.m[0][3] * m.m[2][2] * m.m[3][0]
+		- m.m[0][2] * m.m[2][0] * m.m[3][3]
+		- m.m[0][0] * m.m[2][3] * m.m[3][2]) / A;
+
+	result.m[1][2] = (-m.m[0][0] * m.m[1][2] * m.m[3][3]
+		- m.m[0][2] * m.m[1][3] * m.m[3][0]
+		- m.m[0][3] * m.m[1][0] * m.m[3][2]
+		+ m.m[0][3] * m.m[1][2] * m.m[3][0]
+		+ m.m[0][2] * m.m[1][0] * m.m[3][3]
+		+ m.m[0][0] * m.m[1][3] * m.m[3][2]) / A;
+
+	result.m[1][3] = (m.m[0][0] * m.m[1][2] * m.m[2][3]
+		+ m.m[0][2] * m.m[1][3] * m.m[2][0]
+		+ m.m[0][3] * m.m[1][0] * m.m[2][2]
+		- m.m[0][3] * m.m[1][2] * m.m[2][0]
+		- m.m[0][2] * m.m[1][0] * m.m[2][3]
+		- m.m[0][0] * m.m[1][3] * m.m[2][2]) / A;
+
+
+	result.m[2][0] = (m.m[1][0] * m.m[2][1] * m.m[3][3]
+		+ m.m[1][1] * m.m[2][3] * m.m[3][0]
+		+ m.m[1][3] * m.m[2][0] * m.m[3][1]
+		- m.m[1][3] * m.m[2][1] * m.m[3][0]
+		- m.m[1][1] * m.m[2][0] * m.m[3][3]
+		- m.m[1][0] * m.m[2][3] * m.m[3][1]) / A;
+
+	result.m[2][1] = (-m.m[0][0] * m.m[2][1] * m.m[3][3]
+		- m.m[0][1] * m.m[2][3] * m.m[3][0]
+		- m.m[0][3] * m.m[2][0] * m.m[3][1]
+		+ m.m[0][3] * m.m[2][1] * m.m[3][0]
+		+ m.m[0][1] * m.m[2][0] * m.m[3][3]
+		+ m.m[0][0] * m.m[2][3] * m.m[3][1]) / A;
+
+	result.m[2][2] = (m.m[0][0] * m.m[1][1] * m.m[3][3]
+		+ m.m[0][1] * m.m[1][3] * m.m[3][0]
+		+ m.m[0][3] * m.m[1][0] * m.m[3][1]
+		- m.m[0][3] * m.m[1][1] * m.m[3][0]
+		- m.m[0][1] * m.m[1][0] * m.m[3][3]
+		- m.m[0][0] * m.m[1][3] * m.m[3][1]) / A;
+
+	result.m[2][3] = (-m.m[0][0] * m.m[1][1] * m.m[2][3]
+		- m.m[0][1] * m.m[1][3] * m.m[2][0]
+		- m.m[0][3] * m.m[1][0] * m.m[2][1]
+		+ m.m[0][3] * m.m[1][1] * m.m[2][0]
+		+ m.m[0][1] * m.m[1][0] * m.m[2][3]
+		+ m.m[0][0] * m.m[1][3] * m.m[2][1]) / A;
+
+
+	result.m[3][0] = (-m.m[1][0] * m.m[2][1] * m.m[3][2]
+		- m.m[1][1] * m.m[2][2] * m.m[3][0]
+		- m.m[1][2] * m.m[2][0] * m.m[3][1]
+		+ m.m[1][2] * m.m[2][1] * m.m[3][0]
+		+ m.m[1][1] * m.m[2][0] * m.m[3][2]
+		+ m.m[1][0] * m.m[2][2] * m.m[3][1]) / A;
+
+	result.m[3][1] = (m.m[0][0] * m.m[2][1] * m.m[3][2]
+		+ m.m[0][1] * m.m[2][2] * m.m[3][0]
+		+ m.m[0][2] * m.m[2][0] * m.m[3][1]
+		- m.m[0][2] * m.m[2][1] * m.m[3][0]
+		- m.m[0][1] * m.m[2][0] * m.m[3][2]
+		- m.m[0][0] * m.m[2][2] * m.m[3][1]) / A;
+
+	result.m[3][2] = (-m.m[0][0] * m.m[1][1] * m.m[3][2]
+		- m.m[0][1] * m.m[1][2] * m.m[3][0]
+		- m.m[0][2] * m.m[1][0] * m.m[3][1]
+		+ m.m[0][2] * m.m[1][1] * m.m[3][0]
+		+ m.m[0][1] * m.m[1][0] * m.m[3][2]
+		+ m.m[0][0] * m.m[1][2] * m.m[3][1]) / A;
+
+	result.m[3][3] = (m.m[0][0] * m.m[1][1] * m.m[2][2]
+		+ m.m[0][1] * m.m[1][2] * m.m[2][0]
+		+ m.m[0][2] * m.m[1][0] * m.m[2][1]
+		- m.m[0][2] * m.m[1][1] * m.m[2][0]
+		- m.m[0][1] * m.m[1][0] * m.m[2][2]
+		- m.m[0][0] * m.m[1][2] * m.m[2][1]) / A;
+
+	return result;
+}
+#pragma endregion
+
+Matrix4x4 MakePerspectiveFovMatrix(float forY, float aspectRatio, float nearClip, float farClip) {
+	Matrix4x4 result;
+	float cot = 1 / std::tan(forY / 2);
+
+	result.m[0][0] = (1 / aspectRatio) * cot;
+	result.m[1][1] = cot;
+	result.m[2][2] = farClip / (farClip - nearClip);
+	result.m[2][3] = 1.0f;
+	result.m[3][2] = (-nearClip * farClip) / (farClip - nearClip);
+
+
+	result.m[0][1] = 0.0f;
+	result.m[0][2] = 0.0f;
+	result.m[0][3] = 0.0f;
+	result.m[1][0] = 0.0f;
+	result.m[1][2] = 0.0f;
+	result.m[1][3] = 0.0f;
+	result.m[2][0] = 0.0f;
+	result.m[2][1] = 0.0f;
+	result.m[3][0] = 0.0f;
+	result.m[3][1] = 0.0f;
+	result.m[3][3] = 0.0f;
+
+
+	return result;
+}
+
 
 ID3D12Resource* CreateBufferResource(ID3D12Device* device, size_t sizeInBytes) {
 	//VertexResource
@@ -419,10 +749,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	//RootParameter作成
-	D3D12_ROOT_PARAMETER rootParameters[1] = {};
+	D3D12_ROOT_PARAMETER rootParameters[2] = {};
 	rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 	rootParameters[0].Descriptor.ShaderRegister = 0;//Object3d.PS.hlsl の b0
+
+	rootParameters[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	rootParameters[1].Descriptor.ShaderRegister = 0;//Object3d.VS.hlsl の b0
+
 	descriptionRootSignature.pParameters = rootParameters;
 	descriptionRootSignature.NumParameters = _countof(rootParameters);
 
@@ -508,6 +843,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	vertexBufferView.StrideInBytes = sizeof(Vector4);
 
 
+	ID3D12Resource* wvpResource = CreateBufferResource(device, sizeof(Matrix4x4));
+
+	Matrix4x4* wvpDate = nullptr;
+
+	wvpResource->Map(0, nullptr, reinterpret_cast<void**>(&wvpDate));
+
+	*wvpDate = MakeIdentity4x4();
+
+
+
 	Vector4* vertexDate = nullptr;
 
 	vertexResource->Map(0, nullptr, reinterpret_cast<void**>(&vertexDate));
@@ -550,67 +895,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	scissorRect.bottom = kClientHeight;
 
 
-	//　これから書き込みバックバッファのインデックスを取得
-	UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
-
-	//TransitionBarrierの設定
-	D3D12_RESOURCE_BARRIER barrier{};
-	//今回のバリアはTransition
-	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-	//Noneにしておく
-	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-	//バリアを貼る対象のリソース。現在のバッファに対して行う
-	barrier.Transition.pResource = swapChainResource[backBufferIndex];
-	//前の(現在の)ResourceState
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-	//後のResourceState
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	//TransitionBarrierを張る
-	commandList->ResourceBarrier(1, &barrier);
+	Transform transform{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f} ,{0.0f,0.0f,0.0f} };
+	Transform cameraTransform = { {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f}, {0.0f,0.0f,-4.5f} };
 
 
 
 
-	// 描画先のRTVの設定をする
-	commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
-	//指定した色で画面をクリアする　
-	float clearColor[] = { 0.1f,0.25f,0.5f,1.0f };
-	//コマンド蓄積
-	commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
-
-	commandList->RSSetViewports(1, &viewport);
-	commandList->RSSetScissorRects(1, &scissorRect);
-
-	commandList->SetGraphicsRootSignature(rootSignature);
-	commandList->SetPipelineState(graphicsPipelineState);
-	commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
-
-	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress()); //rootParameterの配列の0番目 [0]
-
-	commandList->DrawInstanced(3, 1, 0, 0);
-
-	//画面に描く処理はすべて終わり、画面に映すので、状況をそうい
-	//今回はResourceTargetからPresentにする
-	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-	//TransitionBarrierを張る
-	commandList->ResourceBarrier(1, &barrier);
 
 
-
-	//コマンドリストの内容を確定させる。全てのコマンドを積んでからclearする
-	hr = commandList->Close();
-	assert(SUCCEEDED(hr));
-
-
-	//GPUにコマンドリストの実行を行わせる
-	ID3D12CommandList* commandLists[] = { commandList };
-	commandQueue->ExecuteCommandLists(1, commandLists);
-	//GPUとOSに画面の交換を行うように通知する
-	swapChain->Present(1, 0);
 
 	//初期化で0でFenceを作る
 	ID3D12Fence* fence = nullptr;
@@ -620,9 +913,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	HANDLE fenceEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 	assert(fenceEvent != nullptr);
-
-	// 出力ウィンドウへの文字出力
-	OutputDebugStringA("Hello DirectX!\n");
 
 
 	MSG msg{};
@@ -634,28 +924,110 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		else {
 			//ゲームの処理
+
+			//　これから書き込みバックバッファのインデックスを取得
+			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+
+
+			//TransitionBarrierの設定
+			D3D12_RESOURCE_BARRIER barrier{};
+			//今回のバリアはTransition
+			barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+			//Noneにしておく
+			barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+			//バリアを貼る対象のリソース。現在のバッファに対して行う
+			barrier.Transition.pResource = swapChainResource[backBufferIndex];
+			//前の(現在の)ResourceState
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+			//後のResourceState
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			//TransitionBarrierを張る
+			commandList->ResourceBarrier(1, &barrier);
+
+
+
+
+			// 描画先のRTVの設定をする
+			commandList->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, nullptr);
+			//指定した色で画面をクリアする　
+			float clearColor[] = { 0.1f,0.25f,0.5f,1.0f };
+			//コマンド蓄積
+			commandList->ClearRenderTargetView(rtvHandles[backBufferIndex], clearColor, 0, nullptr);
+
+			commandList->RSSetViewports(1, &viewport);
+			commandList->RSSetScissorRects(1, &scissorRect);
+
+			commandList->SetGraphicsRootSignature(rootSignature);
+			commandList->SetPipelineState(graphicsPipelineState);
+			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+
+			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress()); //rootParameterの配列の0番目 [0]
+
+
+			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
+
+
+			commandList->DrawInstanced(3, 1, 0, 0);//だいたい最後
+
+			//画面に描く処理はすべて終わり、画面に映すので、状況をそうい
+			//今回はResourceTargetからPresentにする
+			barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+			barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+			//TransitionBarrierを張る
+			commandList->ResourceBarrier(1, &barrier);
+
+
+
+			//コマンドリストの内容を確定させる。全てのコマンドを積んでからclearする
+			hr = commandList->Close();
+			assert(SUCCEEDED(hr));
+
+
+			//GPUにコマンドリストの実行を行わせる
+			ID3D12CommandList* commandLists[] = { commandList };
+			commandQueue->ExecuteCommandLists(1, commandLists);
+			//GPUとOSに画面の交換を行うように通知する
+			swapChain->Present(1, 0);
+
+			//// 出力ウィンドウへの文字出力
+			//OutputDebugStringA("Hello DirectX!\n");
+			//FENCEを更新する
+			fenceValue++;
+
+			commandQueue->Signal(fence, fenceValue);
+
+			if (fence->GetCompletedValue() < fenceValue) {
+
+				fence->SetEventOnCompletion(fenceValue, fenceEvent);
+
+				WaitForSingleObject(fenceEvent, INFINITE);
+
+			}
+
+
+			//次のフレームのコマンドリストを準備
+			hr = commandAllocator->Reset();
+			assert(SUCCEEDED(hr));
+			hr = commandList->Reset(commandAllocator, nullptr);
+			assert(SUCCEEDED(hr));
+
+
+			transform.rotate.y += 0.03f;
+
+			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
+			Matrix4x4 viewMatrix = Inverse(cameraMatrix);
+			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(1280.0f) / float(720.0f), 0.1f, 100.0f);
+			Matrix4x4 WorldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
+
+			*wvpDate = WorldViewProjectionMatrix;
+
+
 		}
 	}
 
-	//FENCEを更新する
-	fenceValue++;
-
-	commandQueue->Signal(fence, fenceValue);
-
-	if (fence->GetCompletedValue() < fenceValue) {
-
-		fence->SetEventOnCompletion(fenceValue, fenceEvent);
-
-		WaitForSingleObject(fenceEvent, INFINITE);
-
-	}
-
-
-	//次のフレームのコマンドリストを準備
-	hr = commandAllocator->Reset();
-	assert(SUCCEEDED(hr));
-	hr = commandList->Reset(commandAllocator, nullptr);
-	assert(SUCCEEDED(hr));
 
 	CloseHandle(fenceEvent);
 	fence->Release();
@@ -670,7 +1042,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	useAdapter->Release();
 	dxgiFactory->Release();
 
-
+	wvpResource->Release();
 	vertexResource->Release();
 
 	graphicsPipelineState->Release();
@@ -700,9 +1072,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
 		debug->Release();
 	}
-
-
-
 
 
 	return 0;
