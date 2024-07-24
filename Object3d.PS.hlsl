@@ -5,13 +5,13 @@
 
 struct Material
 {
-    float4 color;
+    float32_t4 color;
 };
 
 ConstantBuffer<Material> gMaterial : register(b0);
 struct PixelShaderOutput
 {
-    float4 color : SV_Target0;
+    float32_t4 color : SV_Target0;
 };
 
 PixelShaderOutput main()
