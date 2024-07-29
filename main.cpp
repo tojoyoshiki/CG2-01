@@ -1,13 +1,13 @@
 #include <Windows.h>
+#include <cassert>
 #include <cstdint>
-#include <string>
-#include <format>
+#include <dxcapi.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
-#include <cassert>
 #include <dxgidebug.h>
-#include <dxcapi.h>
+#include <string>
 #include <cstdint>
+#include <format>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <assert.h>
