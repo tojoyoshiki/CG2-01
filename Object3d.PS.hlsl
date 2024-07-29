@@ -35,10 +35,7 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     // テクスチャサンプルを行う
     float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
-
-    // ピクセルの色を計算する
-    //output.color = gMaterial.color * textureColor;
-
+    
     if (gMaterial.enableLighting != 0)
     {
         float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
