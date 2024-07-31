@@ -456,8 +456,8 @@ IDxcBlob* CompileShader(const std::wstring& filePath,
 	hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
 	assert(SUCCEEDED(hr));
 	Log(ConvertString(std::format(L"Compile Succeeded, path{}, profile:{}\n", filePath, profile)));
-	shaderSource->Release();
-	shaderResult->Release();
+	//shaderSource->Release();
+	//shaderResult->Release();
 
 	return shaderBlob;
 
