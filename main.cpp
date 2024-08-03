@@ -456,13 +456,10 @@ Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const std::wstring& filePath,
 	hr = shaderResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
 	assert(SUCCEEDED(hr));
 	Log(ConvertString(std::format(L"Compile Succeeded, path{}, profile:{}\n", filePath, profile)));
-	//shaderSource->Release();
-	//shaderResult->Release();
 
 	return shaderBlob;
 
 }
-
 
 Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(ID3D12Device* device, size_t size) {
 	D3D12_HEAP_PROPERTIES uploadHeapProperties{};
@@ -1482,40 +1479,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-	//depthStencilResource->Release();
-	//textureResource->Release();
-	//srvDescriptorHeap->Release();
-	//wvpResource->Release();
-	//materialResource->Release();
-	//vertexResource->Release();
-	//graphicsPipelineState->Release();
-	//signatureBlog->Release();
-	//if (errorBlog) {
-	//	errorBlog->Release();
-	//}
-	//swapChain->Release();
-
-	//commandList->Release();
-	//commandAllocator->Release();
-	//commandQueue->Release();
-	//device->Release();
-	//useAdapter->Release();
-	//dxgiFactory->Release();
 	CloseHandle(fenceEvent);
-#ifdef _DEBUG
-	//debugController->Release();
-#endif
 	CloseWindow(hwnd);
-
-	//IDXGIDebug1* debug;
-	//if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug)))) {
-
-	//	debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL);
-	//	debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
-	//	debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
-	//	debug->Release();
-
-	//}
 
 	CoUninitialize();
 
