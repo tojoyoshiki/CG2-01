@@ -15,6 +15,7 @@
 #include <fstream>
 #include <sstream>
 #include <wrl.h>
+#include "Input.h"
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
@@ -727,6 +728,7 @@ struct D3DResourceLeakChecker {
 	}
 };
 
+//エントリーポイント
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	D3DResourceLeakChecker leakCheck;
 
@@ -1338,8 +1340,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			DispatchMessage(&msg);
 		}
 		else {
-			//ゲームの処理
 
+			//Inputポインタ初期化
+			Input* input = nullptr;
+			//入力初期化
+			input = new Input();
+			input->Initialize(w.hInstance,hwnd);
+			
+			//ゲームの処理
 			ImGui_ImplDX12_NewFrame();
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
@@ -1395,6 +1403,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			//ImGuiの内部コマンドを生成する
 			ImGui::Render();
+
+			//input更新
+			input->Update();
 
 			//描画
 			commandList->RSSetViewports(1, &viewport);
@@ -1480,6 +1491,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
 			materialDataSprite->uvTransform = uvTransformMatrix;
 
+	        delete input;
 		}
 	}
 
@@ -1490,6 +1502,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	CloseHandle(fenceEvent);
 	CloseWindow(hwnd);
+
 
 	CoUninitialize();
 
