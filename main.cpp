@@ -644,6 +644,8 @@ ModelData LoadObjFile(const std::string& directoryPath, const std::string& filen
 		std::istringstream s(line);
 		s >> identifier;//先頭の識別子を読む
 
+		//modelData.vertices.push_back({ .position = {1.0f,1.0f,0.0f,1.0,},.tecoord = {0.0f,0.0f},.normal = {0.0f,0.0f,1.0f} });
+
 		//identifierに応じた処理
 		if (identifier == "v") {
 			Vector4 position;
@@ -1108,6 +1110,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	//モデル読み込み
 	ModelData modelData = LoadObjFile("resources", "axis.obj");
+
+	modelData.vertices.push_back(
+	 { .position = {1.0f,1.0f,0.0f,1.0},
+	 .tecoord = {0.0f,0.0f},
+	 .normal = {0.0f,0.0f,1.0f} });
+
 	//頂点リソースを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = CreateBufferResource(device.Get(), sizeof(VertexData) * modelData.vertices.size());
 	//頂点バッファビューを作成する
