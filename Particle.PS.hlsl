@@ -42,7 +42,7 @@ PixelShaderOutput main(VertexShaderOutput input)
         float cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
        // output.color = gMaterial.color * textureColor * gDirectionalLight.color * cos * gDirectionalLight.intensity;
         output.color.rgb = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * cos * gDirectionalLight.intensity;
-        output.color.a = gMaterial.color.a*textureColor.a;
+        output.color.a = gMaterial.color.a * textureColor.a;
     }
     else
     {
@@ -51,3 +51,21 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     return output;
 }
+//struct GSOutput
+//{
+//	float4 pos : SV_POSITION;
+//};
+
+//[maxvertexcount(3)]
+//void main(
+//	triangle float4 input[3] : SV_POSITION, 
+//	inout TriangleStream< GSOutput > output
+//)
+//{
+//	for (uint i = 0; i < 3; i++)
+//	{
+//		GSOutput element;
+//		element.pos = input[i];
+//		output.Append(element);
+//	}
+//}

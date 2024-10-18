@@ -10,6 +10,7 @@
 #include <format>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <numbers>
 #include <assert.h>
 #include <cmath>
 #include <fstream>
@@ -1111,11 +1112,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//モデル読み込み
 	ModelData modelData = LoadObjFile("resources", "axis.obj");
 
-	modelData.vertices.push_back(
-	 { .position = {1.0f,1.0f,0.0f,1.0},
-	 .tecoord = {0.0f,0.0f},
-	 .normal = {0.0f,0.0f,1.0f} });
-
 	//頂点リソースを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = CreateBufferResource(device.Get(), sizeof(VertexData) * modelData.vertices.size());
 	//頂点バッファビューを作成する
@@ -1420,8 +1416,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
 
 			commandList->SetGraphicsRootConstantBufferView(3, materialResourceLight->GetGPUVirtualAddress());
-
+			
 			commandList->DrawInstanced(UINT(modelData.vertices.size()), 1, 0, 0);
+			
 
 			//Spriteを常にuvCheckerにする
 			commandList->SetGraphicsRootDescriptorTable(2, textureSrvHandleGPU);
