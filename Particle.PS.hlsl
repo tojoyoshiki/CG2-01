@@ -10,9 +10,10 @@ struct Material
     float4x4 uvTransform;
 };
 
-ConstantBuffer<Material> gMaterial : register(b0);
-//StructuredBuffer<TransformationMatrix> gTransformationMatrices : register(t0);
-
+cbuffer MaterialBuffer : register(b0)
+{
+    Material gMaterial;
+}
 
 struct PixelShaderOutput
 {
@@ -26,7 +27,10 @@ struct DirectionalLight
     float intensity;
 };
 
-ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
+cbuffer DirectionalLightBuffer : register(b1)
+{
+    DirectionalLight gDirectionalLight;
+}
 
 PixelShaderOutput main(VertexShaderOutput input)
 {
@@ -42,7 +46,6 @@ PixelShaderOutput main(VertexShaderOutput input)
     {
         float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
         float cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
-       // output.color = gMaterial.color * textureColor * gDirectionalLight.color * cos * gDirectionalLight.intensity;
         output.color.rgb = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * cos * gDirectionalLight.intensity;
         output.color.a = gMaterial.color.a * textureColor.a;
     }
