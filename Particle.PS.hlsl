@@ -11,6 +11,8 @@ struct Material
 };
 
 ConstantBuffer<Material> gMaterial : register(b0);
+//StructuredBuffer<TransformationMatrix> gTransformationMatrices : register(t0);
+
 
 struct PixelShaderOutput
 {
@@ -51,21 +53,3 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     return output;
 }
-//struct GSOutput
-//{
-//	float4 pos : SV_POSITION;
-//};
-
-//[maxvertexcount(3)]
-//void main(
-//	triangle float4 input[3] : SV_POSITION, 
-//	inout TriangleStream< GSOutput > output
-//)
-//{
-//	for (uint i = 0; i < 3; i++)
-//	{
-//		GSOutput element;
-//		element.pos = input[i];
-//		output.Append(element);
-//	}
-//}

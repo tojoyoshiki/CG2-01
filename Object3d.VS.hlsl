@@ -1,4 +1,4 @@
-#include "Particle.hlsli"
+#include "Object3d.hlsli"
 
 struct TransformationMatrix
 {
