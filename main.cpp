@@ -1346,7 +1346,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//入力初期化
 			input = new Input();
 			input->Initialize(w.hInstance,hwnd);
-			
+			input->Update();
+
 			//ゲームの処理
 			ImGui_ImplDX12_NewFrame();
 			ImGui_ImplWin32_NewFrame();

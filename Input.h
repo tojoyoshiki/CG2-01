@@ -15,5 +15,8 @@ public:
 	ComPtr<IDirectInputDevice8> keyboard;
 	void Initialize(HINSTANCE hInstance, HWND hwnd);
 	void Update();
+
+private:
+	Comptr<IDirectInputDevice8> keyboard;
 };
 
