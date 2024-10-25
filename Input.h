@@ -12,11 +12,17 @@ class Input
 {
 public:
 	template <class T>using ComPtr = Microsoft::WRL::ComPtr<T>;
-	ComPtr<IDirectInputDevice8> keyboard;
+	
 	void Initialize(HINSTANCE hInstance, HWND hwnd);
 	void Update();
+	
+	bool PushKey(BYTE keyNumber);
+	bool TriggerKey(BYTE keyNumber);
 
 private:
-	Comptr<IDirectInputDevice8> keyboard;
+	ComPtr<IDirectInputDevice8> devkeyboard;
+
+	BYTE key[256] = {};
+	BYTE keyPre[256] = {};
 };
 

@@ -1345,7 +1345,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Input* input = nullptr;
 			//入力初期化
 			input = new Input();
-			input->Initialize(w.hInstance,hwnd);
+			input->Initialize(wc.hInstance,hwnd);
 			input->Update();
 
 			//ゲームの処理
