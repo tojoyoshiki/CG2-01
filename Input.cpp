@@ -8,10 +8,14 @@
 void Input::Initialize(HINSTANCE hInstance, HWND hwnd)
 {
 	//インスタンス生成
-	IDirectInput8* directInput = nullptr;
 	HRESULT result = DirectInput8Create(
 		hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8,
 		(void**)&directInput, nullptr);
+	assert(SUCCEEDED(result));
+
+	//キーボードデバイスの生成
+	result = directInput->CreateDevice(GUID_SysKeyboard,
+		&devkeyboard, NULL);
 	assert(SUCCEEDED(result));
 }
 

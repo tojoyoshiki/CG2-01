@@ -20,7 +20,11 @@ public:
 	bool TriggerKey(BYTE keyNumber);
 
 private:
+	//インスタンス生成
+	IDirectInput8* directInput = nullptr;
+	//キーボードデバイスの生成
 	ComPtr<IDirectInputDevice8> devkeyboard;
+
 
 	BYTE key[256] = {};
 	BYTE keyPre[256] = {};
