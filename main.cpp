@@ -1337,7 +1337,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//入力初期化
 			input = new Input();
 			input->Initialize(w.hInstance,hwnd);
-			input->Update();
 
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
@@ -1348,6 +1347,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		else {
 
+			input->Update();
 
 			//ゲームの処理
 			ImGui_ImplDX12_NewFrame();
