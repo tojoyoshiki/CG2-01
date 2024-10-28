@@ -1332,6 +1332,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	);
 
 	MSG msg{};
+			//Inputポインタ初期化
+			Input* input = nullptr;
+			//入力初期化
+			input = new Input();
+			input->Initialize(w.hInstance,hwnd);
+			input->Update();
+
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
 		//Windowにメッセージが来てたら最優先で処理させる
@@ -1341,12 +1348,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 		else {
 
-			//Inputポインタ初期化
-			Input* input = nullptr;
-			//入力初期化
-			input = new Input();
-			input->Initialize(w.hInstance,hwnd);
-			input->Update();
 
 			//ゲームの処理
 			ImGui_ImplDX12_NewFrame();
@@ -1492,9 +1493,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
 			materialDataSprite->uvTransform = uvTransformMatrix;
 
-	        delete input;
 		}
 	}
+	        delete input;
 
 	//ImGuiの終了処理
 	ImGui_ImplDX12_Shutdown();
