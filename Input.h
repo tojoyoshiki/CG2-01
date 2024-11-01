@@ -25,7 +25,6 @@ private:
 	//キーボードデバイスの生成
 	ComPtr<IDirectInputDevice8> devkeyboard;
 
-
 	BYTE key[256] = {};
 	BYTE keyPre[256] = {};
 };
