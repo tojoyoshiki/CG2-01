@@ -1115,6 +1115,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	hr = device->CreateGraphicsPipelineState(&graphicPipelineStateDesc, IID_PPV_ARGS(&graphicsPipelineState));
 	assert(SUCCEEDED(hr));
 
+	//ここを変える
 	//モデル読み込み
 	ModelData modelData = LoadObjFile("resources", "axis.obj");
 
