@@ -38,6 +38,13 @@ struct Vector3 {
 	float z;
 };
 
+Vector3& operator+=(const Vector3& other) {
+	x += other.x;
+	y += other.y;
+	z += other.z;
+	return *this;
+}
+
 struct Vector4 {
 	float x;
 	float y;
@@ -49,10 +56,16 @@ struct Matrix4x4 {
 	float m[4][4];
 };
 
+
 struct Transform {
 	Vector3 scale;
 	Vector3 rotate;
 	Vector3 translate;
+};
+
+struct Particle {
+	Transform transform;
+	Vector3 velocity;
 };
 
 struct VertexData {
@@ -87,9 +100,6 @@ struct ModelData {
 	std::vector<VertexData> vertices;
 	MaterialData material;
 };
-
-
-
 
 
 
@@ -1366,6 +1376,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		transforms[index].translate = { index * 0.1f,index * 0.1f,index * 0.1f };
 	}
 
+	Particle particles[kNumInstance];
+	for (uint32_t index = 0; index < kNumInstance; ++index) {
+		particles[index].transform = { 1.0f,1.0f,1.0f };
+		particles[index].velocity = { 0.0f, 1.0f, 0.0f };
+	}
+
+	const float kDeltaTime = 1.0f / 60.0f;
+
 	MSG msg{};
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
@@ -1432,6 +1450,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			//ImGuiの内部コマンドを生成する
 			ImGui::Render();
+
+			for (uint32_t index = 0; index < kNumInstance; ++index) {
+				particles[index].transform.translate += particles[index].velocity * kDeltaTime;
+			}
 
 			//描画
 			commandList->RSSetViewports(1, &viewport);
