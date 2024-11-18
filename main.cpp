@@ -1336,7 +1336,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Input* input = nullptr;
 			//入力初期化
 			input = new Input();
-			input->Initialize(w.hInstance,hwnd);
+			input->Initialize(wc.hInstance,hwnd);
 
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
@@ -1405,9 +1405,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			//ImGuiの内部コマンドを生成する
 			ImGui::Render();
-
-			//input更新
-			input->Update();
 
 			//描画
 			commandList->RSSetViewports(1, &viewport);
