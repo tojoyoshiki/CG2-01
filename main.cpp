@@ -16,6 +16,7 @@
 #include <sstream>
 #include <wrl.h>
 #include "Input.h"
+#include "WinApp.h"
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
@@ -87,8 +88,6 @@ struct ModelData {
 	std::vector<VertexData> vertices;
 	MaterialData material;
 };
-
-
 
 
 
@@ -734,47 +733,54 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	CoInitializeEx(0, COINIT_MULTITHREADED);
 
+	//WinAppポインタ初期化
+	WinApp* winApp = nullptr;
+
+	//WindowsAppの初期化
+	winApp = new WinApp();
+	winApp->Initialize();
+
 #pragma region Windowの生成
-	WNDCLASS wc{};
-	//ウィンドウプロシージャ
-	wc.lpfnWndProc = WindowProc;
-	//ウィンドウクラス名( なんでも良い )
-	wc.lpszClassName = L"CG2WindowClass";
-	//インスタンスハンドル
-	wc.hInstance = GetModuleHandle(nullptr);
-	//カーソル
-	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	//WNDCLASS wc{};
+	////ウィンドウプロシージャ
+	//wc.lpfnWndProc = WindowProc;
+	////ウィンドウクラス名( なんでも良い )
+	//wc.lpszClassName = L"CG2WindowClass";
+	////インスタンスハンドル
+	//wc.hInstance = GetModuleHandle(nullptr);
+	////カーソル
+	//wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 
-	//ウィンドウクラスを登録する
-	RegisterClass(&wc);
+	////ウィンドウクラスを登録する
+	//RegisterClass(&wc);
 
-	//クライアント領域のサイズ
-	const int32_t kClientWidth = 1280;
-	const int32_t kClientHeight = 720;
+	////クライアント領域のサイズ
+	//const int32_t kClientWidth = 1280;
+	//const int32_t kClientHeight = 720;
 
-	//ウィンドウサイズを表す構造体にクライアント領域を入れる
-	RECT wrc = { 0,0,kClientWidth ,kClientHeight };
+	////ウィンドウサイズを表す構造体にクライアント領域を入れる
+	//RECT wrc = { 0,0,kClientWidth ,kClientHeight };
 
-	//クライアント領域を元に実際のサイズに wrc を変更してもらう
-	AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
+	////クライアント領域を元に実際のサイズに wrc を変更してもらう
+	//AdjustWindowRect(&wrc, WS_OVERLAPPEDWINDOW, false);
 
-	//ウィンドウの生成
-	HWND hwnd = CreateWindow(
-		wc.lpszClassName,		//利用するクラス名
-		L"CG2",					//タイトルバーの文字( なんでも良い )
-		WS_OVERLAPPEDWINDOW,	//ウィンドウスタイル
-		CW_USEDEFAULT,			//表示X座標(Windowsに任せる)
-		CW_USEDEFAULT,			//表示Y座標(WindowsOSに任せる)
-		wrc.right - wrc.left,	//ウィンドウ横幅
-		wrc.bottom - wrc.top,	//ウィンドウ縦幅
-		nullptr,				//親ウィンドウハンドル
-		nullptr,				//メニューハンドル
-		wc.hInstance,			//インスタンスハンドル
-		nullptr					//オプション
-	);
+	////ウィンドウの生成
+	//HWND hwnd = CreateWindow(
+	//	wc.lpszClassName,		//利用するクラス名
+	//	L"CG2",					//タイトルバーの文字( なんでも良い )
+	//	WS_OVERLAPPEDWINDOW,	//ウィンドウスタイル
+	//	CW_USEDEFAULT,			//表示X座標(Windowsに任せる)
+	//	CW_USEDEFAULT,			//表示Y座標(WindowsOSに任せる)
+	//	wrc.right - wrc.left,	//ウィンドウ横幅
+	//	wrc.bottom - wrc.top,	//ウィンドウ縦幅
+	//	nullptr,				//親ウィンドウハンドル
+	//	nullptr,				//メニューハンドル
+	//	wc.hInstance,			//インスタンスハンドル
+	//	nullptr					//オプション
+	//);
 
-	//ウィンドウを表示する
-	ShowWindow(hwnd, SW_SHOW);
+	////ウィンドウを表示する
+	//ShowWindow(hwnd, SW_SHOW);
 
 #pragma endregion
 
@@ -855,7 +861,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 #ifdef _DEBUG
 
-//	ID3D12InfoQueue infoQueue = nullptr;
+	//	ID3D12InfoQueue infoQueue = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12InfoQueue> infoQueue = nullptr;
 	if (SUCCEEDED(device->QueryInterface(IID_PPV_ARGS(&infoQueue)))) {
 		infoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -1332,11 +1338,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	);
 
 	MSG msg{};
-			//Inputポインタ初期化
-			Input* input = nullptr;
-			//入力初期化
-			input = new Input();
-			input->Initialize(wc.hInstance,hwnd);
+
+	//Inputポインタ初期化
+	Input* input = nullptr;
+	//入力初期化
+	input = new Input();
+	input->Initialize(wc.hInstance, hwnd);
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
 		//Windowにメッセージが来てたら最優先で処理させる
@@ -1399,7 +1406,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 			//描画用のDescriptorHeapの設定
-			ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap.Get()};
+			ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap.Get() };
 			commandList->SetDescriptorHeaps(1, descriptorHeaps);
 
 			//ImGuiの内部コマンドを生成する
@@ -1456,7 +1463,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			hr = commandList->Close();
 			assert(SUCCEEDED(hr));
 
-			ID3D12CommandList* commandLists[] = { commandList.Get()};
+			ID3D12CommandList* commandLists[] = { commandList.Get() };
 			commandQueue->ExecuteCommandLists(1, commandLists);
 			swapChain->Present(1, 0);
 
@@ -1494,7 +1501,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		}
 	}
-	        delete input;
+	delete input;
+	delete winApp;
 
 	//ImGuiの終了処理
 	ImGui_ImplDX12_Shutdown();
