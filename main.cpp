@@ -1422,7 +1422,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui::SliderAngle("RotateY", &transform.rotate.y);
 			ImGui::SliderAngle("RotateZ", &transform.rotate.z);
 
-			ImGui::Checkbox("update", &update);
+			//ImGui::Checkbox("update", &update);
 			ImGui::Checkbox("useMonsterBall", &useMonsterBall);
 			ImGui::SliderInt("enableLight", &materialData->enableLighting, 0, 1);
 			ImGui::SliderFloat3("LightDirector", &directionalLightData->direction.x, -1.0f, 1.0f);
