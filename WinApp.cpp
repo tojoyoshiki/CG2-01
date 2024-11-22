@@ -13,7 +13,7 @@ void WinApp::Initialize()
 	//メインスレッドではMTAでCOM使う
 	HRESULT hr =CoInitializeEx(0, COINIT_MULTITHREADED);
 	
-	WNDCLASS wc{};
+//	WNDCLASS wc{};
 	//ウィンドウプロシージャ
 	wc.lpfnWndProc = WindowProc;
 	//ウィンドウクラス名( なんでも良い 
@@ -38,7 +38,7 @@ void WinApp::Initialize()
 #pragma region ウインドウの生成と表示
 
 	//ウィンドウの生成
-	HWND hwnd = CreateWindow(
+	hwnd = CreateWindow(
 		wc.lpszClassName,		//利用するクラス名
 		L"CG2",					//タイトルバーの文字( なんでも良い )
 		WS_OVERLAPPEDWINDOW,	//ウィンドウスタイル

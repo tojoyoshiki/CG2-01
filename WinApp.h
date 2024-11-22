@@ -5,6 +5,7 @@
 
 class WinApp
 {
+
 public://静的メンバ関数
 	static LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg,
 		WPARAM wparam, LPARAM lparam);
@@ -13,7 +14,13 @@ public://静的メンバ関数
 	static const int32_t kClientHeight = 720;
 
 public://メンバ関数
+	HWND GetHwnd()const { return hwnd; }
+	HINSTANCE GetInstance()const { return wc.hInstance; }
 	void Initialize();
 	void Update();
+
+private:
+	HWND hwnd = nullptr;
+	WNDCLASS wc{};
 };
 

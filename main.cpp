@@ -15,6 +15,7 @@
 #include <fstream>
 #include <sstream>
 #include <wrl.h>
+#include <stdint.h>
 #include "Input.h"
 #include "WinApp.h"
 #include "externals/imgui/imgui.h"
@@ -921,7 +922,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	swapChainDesc.BufferCount = 2;	//ダブルバッファ
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;	//モニタに写したら、中身を破棄
 	//コマンドキュー、ウィンドウハンドル、設定を渡して生成する	
-	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue.Get(), hwnd, &swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(swapChain.GetAddressOf()));
+	hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue.Get(), 
+		winApp->GetHwnd(),
+		&swapChainDesc, nullptr, nullptr, reinterpret_cast<IDXGISwapChain1**>(swapChain.GetAddressOf()));
 	assert(SUCCEEDED(hr));
 
 #pragma endregion
@@ -1343,7 +1346,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Input* input = nullptr;
 	//入力初期化
 	input = new Input();
-	input->Initialize(wc.hInstance, hwnd);
+	input->Initialize(winApp->GetInstance(), winApp->GetHwnd());
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
 		//Windowにメッセージが来てたら最優先で処理させる
