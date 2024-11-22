@@ -33,17 +33,28 @@ struct Vector2 {
 };
 
 struct Vector3 {
-	float x;
-	float y;
-	float z;
+	float x, y, z;
+
+	// スカラー乗算のオーバーロード
+	Vector3 operator*(float scalar) const {
+		return { x * scalar, y * scalar, z * scalar };
+	}
+
+	// スカラー乗算結果を加算するオーバーロード
+	Vector3& operator+=(const Vector3& other) {
+		x += other.x;
+		y += other.y;
+		z += other.z;
+		return *this;
+	}
 };
 
-Vector3& operator+=(const Vector3& other) {
-	x += other.x;
-	y += other.y;
-	z += other.z;
-	return *this;
-}
+//Vector3& operator+=(const Vector3& other) {
+//	x += other.x;
+//	y += other.y;
+//	z += other.z;
+//	return *this;
+//}
 
 struct Vector4 {
 	float x;
@@ -1376,6 +1387,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		transforms[index].translate = { index * 0.1f,index * 0.1f,index * 0.1f };
 	}
 
+	//p5
 	Particle particles[kNumInstance];
 	for (uint32_t index = 0; index < kNumInstance; ++index) {
 		particles[index].transform = { 1.0f,1.0f,1.0f };
@@ -1383,6 +1395,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 
 	const float kDeltaTime = 1.0f / 60.0f;
+
+	//
 
 	MSG msg{};
 	//ウィンドウの×ボタンが押されるまでループ
@@ -1407,8 +1421,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui::SliderAngle("RotateX", &transform.rotate.x);
 			ImGui::SliderAngle("RotateY", &transform.rotate.y);
 			ImGui::SliderAngle("RotateZ", &transform.rotate.z);
+
+			ImGui::Checkbox("update", &update);
 			ImGui::Checkbox("useMonsterBall", &useMonsterBall);
-			ImGui::SliderInt("Light", &materialData->enableLighting, 0, 1);
+			ImGui::SliderInt("enableLight", &materialData->enableLighting, 0, 1);
 			ImGui::SliderFloat3("LightDirector", &directionalLightData->direction.x, -1.0f, 1.0f);
 			ImGui::DragFloat2("UVTranslate", &uvTransformSprite.translate.x, 0.01f, -10.0f, 10.0f);
 			ImGui::DragFloat2("UVScale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
@@ -1451,6 +1467,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//ImGuiの内部コマンドを生成する
 			ImGui::Render();
 
+			//p5
 			for (uint32_t index = 0; index < kNumInstance; ++index) {
 				particles[index].transform.translate += particles[index].velocity * kDeltaTime;
 			}
