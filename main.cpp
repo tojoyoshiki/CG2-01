@@ -1346,7 +1346,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Input* input = nullptr;
 	//入力初期化
 	input = new Input();
-	input->Initialize(winApp->GetInstance(), winApp->GetHwnd());
+	input->Initialize(winApp);
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
 		//Windowにメッセージが来てたら最優先で処理させる
@@ -1513,8 +1513,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ImGui::DestroyContext();
 
 	CloseHandle(fenceEvent);
-	CloseWindow(hwnd);
-
+	//CloseWindow(hwnd);
+	winApp->Finalize();
 
 	CoUninitialize();
 

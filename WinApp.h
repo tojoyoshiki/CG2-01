@@ -18,6 +18,7 @@ public://メンバ関数
 	HINSTANCE GetInstance()const { return wc.hInstance; }
 	void Initialize();
 	void Update();
+	void Finalize();
 
 private:
 	HWND hwnd = nullptr;
