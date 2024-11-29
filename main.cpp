@@ -1560,9 +1560,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			for (uint32_t index = 0; index < kNumInstance; ++index) {
 				Matrix4x4 worldMatrix =
-					MakeAffineMatrix(
-						transforms[index].scale, transforms[index].rotate, transforms[index].translate);
+				//MakeAffineMatrix(transforms[index].scale, transforms[index].rotate, transforms[index].translate);
+				MakeAffineMatrix(particles[index].transform.scale, 
+					particles[index].transform.rotate, particles[index].transform.translate);
 				Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
+
 				instancingData[index].wvp = worldViewProjectionMatrix;
 				instancingData[index].World = worldMatrix;
 			}
