@@ -16,6 +16,7 @@
 #include <fstream>
 #include <sstream>
 #include <wrl.h>
+#include <random>
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
@@ -652,6 +653,20 @@ MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const st
 	return materialData;
 }
 
+//パーティクル生成乱数関数
+Particle MakeNewParticle(std::mt19937& randomEngine) {
+	std::uniform_real_distribution<float>distribution(-1.0f, 1.0);
+	Particle particle;
+	particle.transform.scale = { 1.0f,1.0f,1.0f };
+	particle.transform.rotate = { 0.0f,0.0f,0.0f };
+	particle.transform.translate = { distribution(randomEngine),
+	distribution(randomEngine),distribution(randomEngine) };
+	particle.velocity = { distribution(randomEngine),
+		distribution(randomEngine),distribution(randomEngine) };
+	return particle;
+
+}
+
 ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename) {
 	//必要となる変数の宣言
 	ModelData modelData;//構築するモデルデータ
@@ -665,8 +680,6 @@ ModelData LoadObjFile(const std::string& directoryPath, const std::string& filen
 		std::string identifier;
 		std::istringstream s(line);
 		s >> identifier;//先頭の識別子を読む
-
-		//modelData.vertices.push_back({ .position = {1.0f,1.0f,0.0f,1.0,},.tecoord = {0.0f,0.0f},.normal = {0.0f,0.0f,1.0f} });
 
 		//identifierに応じた処理
 		if (identifier == "v") {
@@ -1137,7 +1150,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	assert(SUCCEEDED(hr));
 
 	//モデル読み込み
-	ModelData modelData = LoadObjFile("resources", "axis.obj");
+	ModelData modelData = LoadObjFile("resources", "plane.obj");
 
 	//頂点リソースを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = CreateBufferResource(device.Get(), sizeof(VertexData) * modelData.vertices.size());
@@ -1413,6 +1426,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
 
+			std::random_device seedGenerator;
+			std::mt19937 randomEngine(seedGenerator());
+
 			//色を変えるImGuiの処理
 			ImGui::Begin("Setting");
 			// ColorEdit3を使用して色を選択
@@ -1467,7 +1483,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//ImGuiの内部コマンドを生成する
 			ImGui::Render();
 
-			//p5
+			//p8
+			std::uniform_real_distribution<float> distribution(-1.0f, 1.0f);
+
+			for (uint32_t index = 0; index < kNumInstance; ++index) {
+				particles[index] = MakeNewParticle(randomEngine);
+			}
+
 			for (uint32_t index = 0; index < kNumInstance; ++index) {
 				particles[index].transform.translate += particles[index].velocity * kDeltaTime;
 			}
@@ -1560,9 +1582,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			for (uint32_t index = 0; index < kNumInstance; ++index) {
 				Matrix4x4 worldMatrix =
-				//MakeAffineMatrix(transforms[index].scale, transforms[index].rotate, transforms[index].translate);
-				MakeAffineMatrix(particles[index].transform.scale, 
-					particles[index].transform.rotate, particles[index].transform.translate);
+					//MakeAffineMatrix(transforms[index].scale, transforms[index].rotate, transforms[index].translate);
+					MakeAffineMatrix(particles[index].transform.scale,
+						particles[index].transform.rotate, particles[index].transform.translate);
 				Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
 
 				instancingData[index].wvp = worldViewProjectionMatrix;
