@@ -78,6 +78,7 @@ struct Transform {
 struct Particle {
 	Transform transform;
 	Vector3 velocity;
+	Vector4 color;
 };
 
 struct VertexData {
@@ -656,6 +657,7 @@ MaterialData LoadMaterialTemplateFile(const std::string& directoryPath, const st
 //パーティクル生成乱数関数
 Particle MakeNewParticle(std::mt19937& randomEngine) {
 	std::uniform_real_distribution<float>distribution(-1.0f, 1.0);
+	std::uniform_real_distribution<float>distColor(0.0f, 1.0);
 	Particle particle;
 	particle.transform.scale = { 1.0f,1.0f,1.0f };
 	particle.transform.rotate = { 0.0f,0.0f,0.0f };
@@ -663,8 +665,9 @@ Particle MakeNewParticle(std::mt19937& randomEngine) {
 	distribution(randomEngine),distribution(randomEngine) };
 	particle.velocity = { distribution(randomEngine),
 		distribution(randomEngine),distribution(randomEngine) };
+	particle.color = { distColor(randomEngine),
+	distColor(randomEngine), distColor(randomEngine) };
 	return particle;
-
 }
 
 ModelData LoadObjFile(const std::string& directoryPath, const std::string& filename) {
