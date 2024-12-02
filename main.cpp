@@ -1110,7 +1110,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	assert(SUCCEEDED(hr));
 
 	//モデル読み込み
-	ModelData modelData = LoadObjFile("resources", "axis.obj");
+	ModelData modelData = LoadObjFile("resources", "plane.obj");
 	//頂点リソースを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = CreateBufferResource(device.Get(), sizeof(VertexData) * modelData.vertices.size());
 	//頂点バッファビューを作成する
@@ -1318,6 +1318,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//出力ウィンドウへの文字出力ループを抜ける
 	Log("Hello,DirectX!\n");
 
+	float TriggerCheck=2.0f;
+
 	//Imguiの初期化
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -1332,6 +1334,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	);
 
 	MSG msg{};
+
+
 			//Inputポインタ初期化
 			Input* input = nullptr;
 			//入力初期化
@@ -1347,6 +1351,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		else {
 
 			input->Update();
+
+			if (input->TriggerKey(DIK_SPACE)) {
+				TriggerCheck *= -1.0f;
+				cameraTransform.translate.x += TriggerCheck;
+			}
 
 			//ゲームの処理
 			ImGui_ImplDX12_NewFrame();
