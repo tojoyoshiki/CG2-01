@@ -19,4 +19,3 @@ public:
 private:
 	Comptr<IDirectInputDevice8> keyboard;
 };
-
