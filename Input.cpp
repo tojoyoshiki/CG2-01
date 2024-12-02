@@ -7,26 +7,32 @@
 
 void Input::Initialize(WinApp* winApp)
 {
-	//インスタンス生成
-	//HRESULT result = DirectInput8Create(
-	//	hInstance, DIRECTINPUT_VERSION, IID_IDirectInput8,
-	//	(void**)&directInput, nullptr);
-	//assert(SUCCEEDED(result));
+	//借りてきたWinAppのインスタンスを記録
+	this->winApp_ = winApp;
 
-	////キーボードデバイスの生成
-	//result = directInput->CreateDevice(GUID_SysKeyboard,
-	//	&devkeyboard, NULL);
-	//assert(SUCCEEDED(result));
+	//DirectInputの初期化
+	HRESULT result;
+
+	//インスタンス生成
+	result = DirectInput8Create(winApp->GetInstance(),
+		DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&directInput, nullptr);
+	assert(SUCCEEDED(result));
+
+	//キーボードデバイスの生成
+	result = directInput->CreateDevice(GUID_SysKeyboard,
+		&devkeyboard, NULL);
+	assert(SUCCEEDED(result));
 
 	//DurectInputインスタンス生成
-	result = DirectInput8Create(winApp->GetInstance(), DIRECTINPUT_VERSION, IID_IDirectInput8, (void**)&dinput, nullptr);
+	result = DirectInput8Create(winApp->GetInstance(), 
+		DIRECTINPUT_VERSION, IID_IDirectInput8,
+		(void**)&directInput, nullptr);
 
 	//キーボードデバイス生成
-	result = dinput->CreateDevice(GUID_SysKeyboard, &devkeyboard, NULL);
+	result = directInput->CreateDevice(GUID_SysKeyboard, &devkeyboard, NULL);
 	//入力データ形式のセット
 	result = devkeyboard->SetDataFormat(&c_dfDIKeyboard);
 	result = devkeyboard->SetCooperativeLevel(winApp->GetHwnd(), DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
-	this->winApp = winApp;
 }
 
 void Input::Update()

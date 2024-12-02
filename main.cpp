@@ -1331,7 +1331,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
-	ImGui_ImplWin32_Init(hwnd);
 	ImGui_ImplDX12_Init(device.Get(),
 		swapChainDesc.BufferCount,
 		rtvDesc.Format,
@@ -1504,8 +1503,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		}
 	}
-	delete input;
-	delete winApp;
 
 	//ImGuiの終了処理
 	ImGui_ImplDX12_Shutdown();
@@ -1513,8 +1510,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ImGui::DestroyContext();
 
 	CloseHandle(fenceEvent);
-	//CloseWindow(hwnd);
+
+	delete input;
+
 	winApp->Finalize();
+	delete winApp;
+	winApp = nullptr;
 
 	CoUninitialize();
 

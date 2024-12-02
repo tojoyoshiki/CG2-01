@@ -26,7 +26,7 @@ private:
 	//キーボードデバイスの生成
 	ComPtr<IDirectInputDevice8> devkeyboard;
 
-	WinApp* winApp = nullptr;
+	WinApp* winApp_ = nullptr;
 
 	BYTE key[256] = {};
 	BYTE keyPre[256] = {};

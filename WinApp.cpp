@@ -1,14 +1,31 @@
 #include "WinApp.h"
 #include "externals/imgui/imgui.h"
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 LRESULT WinApp::WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
+	if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam)) {
+		return true;
+	}
+
+	//メッセージに応じてゲーム固有の処理を行う
+	switch (msg) {
+		//ウィンドウが破棄された
+	case WM_DESTROY:
+		//OSに対して、アプリの終了を伝える
+		PostQuitMessage(0);
+		return 0;
+	}
+
 	return LRESULT();
 }
 
 void WinApp::Initialize()
 {
 #pragma region ウインドウ生成の設定
+
+	ImGui_ImplWin32_Init(hwnd);
 
 	//メインスレッドではMTAでCOM使う
 	HRESULT hr =CoInitializeEx(0, COINIT_MULTITHREADED);
@@ -17,7 +34,7 @@ void WinApp::Initialize()
 	//ウィンドウプロシージャ
 	wc.lpfnWndProc = WindowProc;
 	//ウィンドウクラス名( なんでも良い 
-	wc.lpszClassName = L"CG2WindowClass";
+	wc.lpszClassName = L"GE3WindowClass";
 	//インスタンスハンドル
 	wc.hInstance = GetModuleHandle(nullptr);
 	//カーソル
