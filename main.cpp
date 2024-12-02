@@ -1492,7 +1492,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		}
 	}
-	        delete input;
 
 	//ImGuiの終了処理
 	ImGui_ImplDX12_Shutdown();
@@ -1502,6 +1501,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	CloseHandle(fenceEvent);
 	CloseWindow(hwnd);
 
+	delete input;
 
 	CoUninitialize();
 

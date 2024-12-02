@@ -12,10 +12,10 @@ class Input
 {
 public:
 	template <class T>using ComPtr = Microsoft::WRL::ComPtr<T>;
-	ComPtr<IDirectInputDevice8> keyboard;
+
 	void Initialize(HINSTANCE hInstance, HWND hwnd);
 	void Update();
 
 private:
-	Comptr<IDirectInputDevice8> keyboard;
+	ComPtr<IDirectInputDevice8> keyboard;
 };

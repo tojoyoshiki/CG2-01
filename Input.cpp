@@ -1,12 +1,8 @@
 #include "Input.h"
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
-
-#pragma comment(lib,"dinput8.lib")
-#pragma comment(lib,"dxguid.lib")
 
 void Input::Initialize(HINSTANCE hInstance, HWND hwnd)
 {
+	keyboard = nullptr;
 	//インスタンス生成
 	IDirectInput8* directInput = nullptr;
 	HRESULT result = DirectInput8Create(
