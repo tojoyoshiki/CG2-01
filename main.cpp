@@ -1335,7 +1335,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	MSG msg{};
 
-
 			//Inputポインタ初期化
 			Input* input = nullptr;
 			//入力初期化
