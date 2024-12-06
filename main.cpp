@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <DirectXMath.h>
 #include <cassert>
 #include <cstdint>
 #include <dxcapi.h>
@@ -659,6 +660,7 @@ Particle MakeNewParticle(std::mt19937& randomEngine) {
 	std::uniform_real_distribution<float>distribution(-1.0f, 1.0);
 	std::uniform_real_distribution<float>distColor(0.0f, 1.0);
 	Particle particle;
+	
 	particle.transform.scale = { 1.0f,1.0f,1.0f };
 	particle.transform.rotate = { 0.0f,0.0f,0.0f };
 	particle.transform.translate = { distribution(randomEngine),
@@ -666,7 +668,8 @@ Particle MakeNewParticle(std::mt19937& randomEngine) {
 	particle.velocity = { distribution(randomEngine),
 		distribution(randomEngine),distribution(randomEngine) };
 	particle.color = { distColor(randomEngine),
-	distColor(randomEngine), distColor(randomEngine) };
+	distColor(randomEngine), distColor(randomEngine),1.0f};
+
 	return particle;
 }
 

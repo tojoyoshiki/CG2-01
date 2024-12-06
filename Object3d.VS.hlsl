@@ -1,9 +1,30 @@
 #include "Object3d.hlsli"
 
+struct Vector4
+{
+    float x;
+    float y;
+    float z;
+    float w;
+};
+
+struct Matrix4x4
+{
+    float m[4][4];
+};
+
+
 struct TransformationMatrix
 {
     float4x4 wvp;
     float4x4 World;
+};
+
+struct ParticleForGPU
+{
+    Matrix4x4 WVP;
+    Matrix4x4 World;
+    Vector4 color;
 };
 
 ConstantBuffer<TransformationMatrix> gTransformationMatrix : register(b0);
