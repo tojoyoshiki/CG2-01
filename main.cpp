@@ -762,7 +762,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//ウィンドウの生成
 	HWND hwnd = CreateWindow(
 		wc.lpszClassName,		//利用するクラス名
-		L"CG2",					//タイトルバーの文字( なんでも良い )
+		L"LE2C_17_トウジョウ_ヨシキ_CG2_評価課題",					//タイトルバーの文字( なんでも良い )
 		WS_OVERLAPPEDWINDOW,	//ウィンドウスタイル
 		CW_USEDEFAULT,			//表示X座標(Windowsに任せる)
 		CW_USEDEFAULT,			//表示Y座標(WindowsOSに任せる)
