@@ -19,7 +19,10 @@ public://メンバ関数
 
 	//終了
 	void Finalize();
-
+	
+	//メッセージの終了
+	bool ProcessMessage();
+	
 	//getter
 	HWND GetHwnd() const { return hwnd; }
 	HINSTANCE GetHInstance()const { return wc.hInstance; }
