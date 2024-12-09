@@ -17,6 +17,9 @@ public://メンバ関数
 	void Initialize();
 	void Update();
 
+	//終了
+	void Finalize();
+
 	//getter
 	HWND GetHwnd() const { return hwnd; }
 	HINSTANCE GetHInstance()const { return wc.hInstance; }

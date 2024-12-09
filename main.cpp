@@ -1345,7 +1345,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	
 	//入力初期化
 	input = new Input();
-	input->Initialize(winApp->GetHInstance(), winApp->GetHwnd());
+	input->Initialize(winApp);
 
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
@@ -1515,6 +1515,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	}
 	delete input;
 	delete winApp;
+	winApp = nullptr;
+
 
 	//ImGuiの終了処理
 	ImGui_ImplDX12_Shutdown();
@@ -1522,10 +1524,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ImGui::DestroyContext();
 
 	CloseHandle(fenceEvent);
-	CloseWindow(winApp->GetHwnd());
 
-
-	CoUninitialize();
+	winApp->Finalize();
 
 	return 0;
 }
