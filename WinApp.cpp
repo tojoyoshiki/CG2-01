@@ -30,7 +30,6 @@ void WinApp::Initialize()
 	//メインスレッドではMTAでCOM使う
 	HRESULT hr =CoInitializeEx(0, COINIT_MULTITHREADED);
 	
-	WNDCLASS wc{};
 	//ウィンドウプロシージャ
 	wc.lpfnWndProc = WindowProc;
 	//ウィンドウクラス名( なんでも良い 
@@ -44,8 +43,6 @@ void WinApp::Initialize()
 	RegisterClass(&wc);
 
 	//クライアント領域のサイズ
-	const int32_t kClientWidth = 1280;
-	const int32_t kClientHeight = 720;
 
 	//ウィンドウサイズを表す構造体にクライアント領域を入れる
 	RECT wrc = { 0,0,kClientWidth ,kClientHeight };
@@ -59,7 +56,7 @@ void WinApp::Initialize()
 #pragma region ウインドウの生成と表示
 
 	//ウィンドウの生成
-	HWND hwnd = CreateWindow(
+	hwnd = CreateWindow(
 		wc.lpszClassName,		//利用するクラス名
 		L"CG2",					//タイトルバーの文字( なんでも良い )
 		WS_OVERLAPPEDWINDOW,	//ウィンドウスタイル
