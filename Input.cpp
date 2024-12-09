@@ -32,17 +32,10 @@ void Input::Update()
 	HRESULT result;
 	memcpy(keyPre, key, sizeof(key));
 
+	//キーボード情報の取得開始
 	result=devkeyboard->Acquire();
+	//全キーの入力情報を取得する
 	result=devkeyboard->GetDeviceState(sizeof(key), key);
-}
-
-bool Input::PushKey(BYTE keyNumber)
-{
-	if (key[keyNumber]) {
-		return false;
-	}
-
-	return false;
 }
 
 bool Input::TriggerKey(BYTE keyNumber)

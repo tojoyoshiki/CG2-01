@@ -1351,6 +1351,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			input->Update();
 
+			if (input->PushKey(DIK_0)) {
+				OutputDebugStringA("Hit 0\n");
+			}
+
 			if (input->TriggerKey(DIK_SPACE)) {
 				TriggerCheck *= -1.0f;
 				cameraTransform.translate.x += TriggerCheck;
