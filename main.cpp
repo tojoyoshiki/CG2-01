@@ -1341,11 +1341,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	float TrigerCheck = 2.0f;
 
-	//Inputポインタ初期化
+	//ポインタ初期化
 	Input* input = nullptr;
+	
 	//入力初期化
 	input = new Input();
 	input->Initialize(wc.hInstance, hwnd);
+
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
 		//Windowにメッセージが来てたら最優先で処理させる
