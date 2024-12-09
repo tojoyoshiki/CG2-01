@@ -17,6 +17,14 @@ void Input::Initialize(HINSTANCE hInstance, HWND hwnd)
 	result = directInput->CreateDevice(GUID_SysKeyboard,
 		&devkeyboard, NULL);
 	assert(SUCCEEDED(result));
+
+	// 入力データ形式のセット
+	result = devkeyboard->SetDataFormat(&c_dfDIKeyboard);//標準形式
+	assert(SUCCEEDED(result));
+	//排他制御レベルのセット
+	result = devkeyboard->SetCooperativeLevel(
+		hwnd, DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY);
+	assert(SUCCEEDED(result));
 }
 
 void Input::Update()
@@ -25,13 +33,13 @@ void Input::Update()
 	memcpy(keyPre, key, sizeof(key));
 
 	result=devkeyboard->Acquire();
-	//BYTE key[256] = {};
 	result=devkeyboard->GetDeviceState(sizeof(key), key);
 }
 
-
 bool Input::TrigerKey(BYTE keyNumber)
 {
-
+	if (key[keyNumber] && !keyPre[keyNumber]) {
+		return true;
+	}
 	return false;
 }
