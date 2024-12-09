@@ -37,17 +37,12 @@ void Input::Update()
 	result=devkeyboard->GetDeviceState(sizeof(key), key);
 }
 
-bool Input::PushKey(BYTE keyNumber)
-{
-	if (key[keyNumber]) {
-		return false;
-	}
 
-	return false;
-}
 
 bool Input::TrigerKey(BYTE keyNumber)
 {
-
+	if (key[keyNumber] && !keyPre[keyNumber]) {
+		return true;
+	}
 	return false;
 }
