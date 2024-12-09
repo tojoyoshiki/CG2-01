@@ -32,7 +32,7 @@ void Input::Update()
 bool Input::PushKey(BYTE keyNumber)
 {
 	if (key[keyNumber]) {
-		return false;
+		return true;
 	}
 
 	return false;
