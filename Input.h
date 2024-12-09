@@ -16,7 +16,14 @@ public:
 	void Initialize(HINSTANCE hInstance, HWND hwnd);
 	void Update();
 	
-	bool PushKey(BYTE keyNumber);
+	bool PushKey(BYTE keyNumber)
+	{
+		if (key[keyNumber]) {
+			return true;
+		}
+
+		return false;
+	}
 	bool TrigerKey(BYTE keyNumber);
 
 private:
