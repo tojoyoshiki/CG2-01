@@ -1332,6 +1332,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	);
 
 	MSG msg{};
+	float TrigerCheck = 2.0f;
+
 			//Inputポインタ初期化
 			Input* input = nullptr;
 			//入力初期化
@@ -1347,6 +1349,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		else {
 
 			input->Update();
+
+			if (input->PushKey(DIK_0)) {
+				OutputDebugStringA("Hit 0\n");
+			}
+
+			if (input->TrigerKey(DIK_SPACE)) {
+				TrigerCheck *= -1.0f;
+				cameraTransform.translate.x += TrigerCheck;
+			}
 
 			//ゲームの処理
 			ImGui_ImplDX12_NewFrame();

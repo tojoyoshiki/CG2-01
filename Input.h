@@ -17,7 +17,7 @@ public:
 	void Update();
 	
 	bool PushKey(BYTE keyNumber);
-	bool TriggerKey(BYTE keyNumber);
+	bool TrigerKey(BYTE keyNumber);
 
 private:
 	//インスタンス生成
