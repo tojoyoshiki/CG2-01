@@ -10,10 +10,7 @@ struct Material
     float4x4 uvTransform;
 };
 
-cbuffer MaterialBuffer : register(b0)
-{
-    Material gMaterial;
-}
+ConstantBuffer<Material> gMaterial : register(b0);
 
 struct PixelShaderOutput
 {
@@ -27,32 +24,24 @@ struct DirectionalLight
     float intensity;
 };
 
-cbuffer DirectionalLightBuffer : register(b1)
-{
-    DirectionalLight gDirectionalLight;
-}
+ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 
 PixelShaderOutput main(VertexShaderOutput input)
 {
     PixelShaderOutput output;
 
-    //Materialを拡張する
+	//Materialを拡張する
     float4 transformedUV = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
 
-    // テクスチャサンプルを行う
+	// テクスチャサンプルを行う
     float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
-    
-    if (gMaterial.enableLighting != 0)
-    {
-        float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
-        float cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
-        output.color.rgb = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * cos * gDirectionalLight.intensity;
-        output.color.a = gMaterial.color.a * textureColor.a;
-    }
-    else
-    {
-        output.color = gMaterial.color * textureColor;
-    }
 
+	// ピクセルの色を計算する
+    output.color = gMaterial.color * textureColor * input.color;
+
+    if (output.color.a == 0.0)
+    {
+        discard;
+    }
     return output;
 }
