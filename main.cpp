@@ -8,7 +8,6 @@
 #include <cassert>
 #include <dxgidebug.h>
 #include <dxcapi.h>
-#include <random>
 #include <cstdint>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -17,6 +16,7 @@
 #include <fstream>
 #include <numbers>
 #include <sstream>
+#include <random>
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
@@ -103,14 +103,17 @@ struct ParticleForGPU {
 	Vector4 color;
 };
 
+// スカラーとの乗算のオーバーロード
 Vector3 operator*(const Vector3& vec, float scalar) {
 	return { vec.x * scalar, vec.y * scalar, vec.z * scalar };
 }
 
+// Vector3同士の乗算（必要であれば定義）
 Vector3 operator*(const Vector3& vec1, const Vector3& vec2) {
 	return { vec1.x * vec2.x, vec1.y * vec2.y, vec1.z * vec2.z };
 }
 
+//+=演算子のオーバーロード
 Vector3& operator+=(Vector3& vec1, const Vector3& vec2) {
 	vec1.x += vec2.x;
 	vec1.y += vec2.y;
@@ -118,10 +121,25 @@ Vector3& operator+=(Vector3& vec1, const Vector3& vec2) {
 	return vec1;
 }
 
+Matrix4x4 operator*(const Matrix4x4& lhs, const Matrix4x4& rhs) {
+	Matrix4x4 result;
+
+	// 行列の掛け算ロジック
+	for (int i = 0; i < 4; ++i) {
+		for (int j = 0; j < 4; ++j) {
+			result.m[i][j] = 0.0f;
+			for (int k = 0; k < 4; ++k) {
+				result.m[i][j] += lhs.m[i][k] * rhs.m[k][j];
+			}
+		}
+	}
+
+	return result;
+}
 
 
 
-
+//数学関数
 Matrix4x4 Inverse(const Matrix4x4& m) {
 	Matrix4x4 result;
 
@@ -361,9 +379,12 @@ Matrix4x4 MakeIdentity4x4() {
 	}
 
 	return identity;
+
 }
 
-Matrix4x4 MakeOrthographicMatrix(float left, float top, float right, float bottom, float nearClip, float farClip) {
+Matrix4x4 MakeOrthographicMatrix(float left,
+	float top, float right, float bottom, 
+	float nearClip, float farClip) {
 	Matrix4x4 mat;
 
 	mat.m[0][0] = 2.0f / (right - left);
@@ -447,8 +468,6 @@ IDxcBlob* CompileShader(const std::wstring& filePath,
 	IDxcCompiler3* dxcCompiler,
 	IDxcIncludeHandler* includeHandler)
 {
-
-
 	Log(ConvertString(std::format(L"Begin CompileShader,path:{},profile:{}\n", filePath, profile)));
 	IDxcBlobEncoding* shaderSource = nullptr;
 	HRESULT hr = dxcUtils->LoadFile(filePath.c_str(), nullptr, &shaderSource);
@@ -763,7 +782,7 @@ Particle MakeNewParticle(std::mt19937& randomEngine) {
 
 //Transform変数を作る
 Transform transform{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f},{0.0f,0.0f,0.0f} };
-Transform cameraTransform{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f} ,{0.0f,0.0f,-10.0f} };
+Transform cameraTransform{ {1.0f,1.0f,1.0f},{std::numbers::pi_v<float> / 3.0f,std::numbers::pi_v<float>,0.0f} ,{0.0f,23.0f,10.0f} };
 Transform transformSprite{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f},{0.0f,0.0f,0.0f} };
 Transform uvTransformSprite{
 	{1.0f,1.0f,1.0f},
@@ -773,6 +792,8 @@ Transform uvTransformSprite{
 
 //SRV切り替え
 bool useMonsterBall = true;
+bool useBillboard = false;
+//bool update = false;
 //描画させる数
 int instanceCount = 10;
 //Δtを定義
@@ -787,12 +808,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	CoInitializeEx(0, COINIT_MULTITHREADED);
 
+
 #pragma region Windowの生成
 	WNDCLASS wc{};
 	//ウィンドウプロシージャ
 	wc.lpfnWndProc = WindowProc;
 	//ウィンドウクラス名( なんでも良い )
-	wc.lpszClassName = L"CG3";
+	wc.lpszClassName = L"CG2WindowClass";
 	//インスタンスハンドル
 	wc.hInstance = GetModuleHandle(nullptr);
 	//カーソル
@@ -814,7 +836,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//ウィンドウの生成
 	HWND hwnd = CreateWindow(
 		wc.lpszClassName,		//利用するクラス名
-		L"CG3",		//タイトルバーの文字( なんでも良い )
+		L"CG3",					//タイトルバーの文字
 		WS_OVERLAPPEDWINDOW,	//ウィンドウスタイル
 		CW_USEDEFAULT,			//表示X座標(Windowsに任せる)
 		CW_USEDEFAULT,			//表示Y座標(WindowsOSに任せる)
@@ -1047,7 +1069,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptorRange[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;//Offsetを自動計算
 
 	D3D12_DESCRIPTOR_RANGE descriptorRangeForInstancing[1] = {};
-	descriptorRangeForInstancing[0].BaseShaderRegister = 0;
+	descriptorRangeForInstancing[0].BaseShaderRegister = 0;  // シェーダーレジスタ t0 にバインド
 	descriptorRangeForInstancing[0].NumDescriptors = 1;
 	descriptorRangeForInstancing[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;  // SRV (Shader Resource View) として設定
 	descriptorRangeForInstancing[0].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -1075,11 +1097,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	descriptionRootSignature.pParameters = rootParameters;	//ルートパラメータ配列へのポインタ
 	descriptionRootSignature.NumParameters = _countof(rootParameters);	//配列の長さ
 
-
-
 	//Samplerの設定
 	D3D12_STATIC_SAMPLER_DESC staticSamplers[1] = {};
-	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	staticSamplers[0].Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;//バイリニアフィルタ
 	staticSamplers[0].AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;//0～1の範囲外をリピート
 	staticSamplers[0].AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;//0～1の範囲外をリピート
 	staticSamplers[0].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;//0～1の範囲外をリピート
@@ -1181,7 +1201,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	modelData.vertices.push_back({ .position = {1.0f,-1.0f,0.0f,1.0f},.texcoord = {0.0f,1.0f},.normal = {0.0f,0.0f,1.0f} });
 	modelData.vertices.push_back({ .position = {-1.0f,1.0f,0.0f,1.0f},.texcoord = {1.0f,0.0f},.normal = {0.0f,0.0f,1.0f} });
 	modelData.vertices.push_back({ .position = {-1.0f,-1.0f,0.0f,1.0f},.texcoord = {1.0f,1.0f},.normal = {0.0f,0.0f,1.0f} });
-	modelData.material.textureFilePath = "./resources/uvChecker.png";
+	modelData.material.textureFilePath = "./resources/circle.png";
 	//頂点リソースを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = CreateBufferResource(device.Get(), sizeof(VertexData) * modelData.vertices.size());
 	//頂点バッファビューを作成する
@@ -1348,7 +1368,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;//2Dテクスチャ
 	srvDesc.Texture2D.MipLevels = UINT(metadata.mipLevels);
 
-
 	// SRVを作成するDescriptorHeapの場所を決める
 	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU = srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU = srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
@@ -1380,7 +1399,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	device->CreateDepthStencilView(depthStencilResource.Get(), &dsvDesc, dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 	//Instancing用のResources
-	const uint32_t kNumMaxInstance = 10;
+	const uint32_t kNumMaxInstance = 10;	//インスタンス数
 	//Instancing用のTransformationMatrixResourcesを作る
 	Microsoft::WRL::ComPtr<ID3D12Resource> instancingResource = CreateBufferResource(device.Get(), sizeof(ParticleForGPU) * kNumMaxInstance);
 	//書き込むためのアドレスを取得
@@ -1410,6 +1429,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		particles[index] = MakeNewParticle(randomEngine);
 		instancingData[index].color = particles[index].color;
 	}
+
+	Matrix4x4 backToFrontMatrix = MakeRotateYMatrix(std::numbers::pi_v<float>);
 
 	//出力ウィンドウへの文字出力ループを抜ける
 	Log("Hello,DirectX!\n");
@@ -1442,7 +1463,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
 
-			ImGui::Begin("CG2_Test03_ImGui");
+			ImGui::Begin("CG2");
 
 			if (ImGui::CollapsingHeader("Camera")) {
 
@@ -1458,7 +1479,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			if (ImGui::CollapsingHeader("Model")) {
 				ImGui::Text("Model Transform");
 
-				ImGui::BeginGroup(); 
+				ImGui::BeginGroup(); // グループ開始
 
 				ImGui::SliderFloat("Model RotateX", &transform.rotate.x, -3.14159f, 3.14159f);
 				ImGui::SliderFloat("Model RotateY", &transform.rotate.y, -3.14159f, 3.14159f);
@@ -1470,22 +1491,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				ImGui::SliderFloat("Model TranslateY", &transform.translate.y, -10.0f, 10.0f);
 				ImGui::SliderFloat("Model TranslateZ", &transform.translate.z, -10.0f, 10.0f);
 
-				ImGui::EndGroup();
-			}/*
+				ImGui::EndGroup(); // グループ終了
+			}
 
 			if (ImGui::CollapsingHeader("useMonsterBall")) {
 
-				ImGui::BeginGroup();
+				ImGui::BeginGroup(); // グループ開始
 
 				ImGui::Text("useMonsterBall");
 				ImGui::Checkbox("useMonsterBall", &useMonsterBall);
 
-				ImGui::EndGroup();
-			}*/
+				ImGui::EndGroup(); // グループ終了
+			}
+
+			if (ImGui::CollapsingHeader("useBillboard")) {
+
+				ImGui::BeginGroup(); // グループ開始
+
+				ImGui::Text("useBillboard");
+				ImGui::Checkbox("useBillboard", &useBillboard);
+
+				ImGui::EndGroup(); // グループ終了
+			}
 
 			if (ImGui::CollapsingHeader("Lighting")) {
 
-				ImGui::BeginGroup(); 
+				ImGui::BeginGroup(); // グループ開始
 
 				ImGui::Text("Lighting");
 				ImGui::SliderInt("Light", &materialData->enableLighting, 0, 1);
@@ -1496,7 +1527,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			if (ImGui::CollapsingHeader("UVchecker")) {
 
-				ImGui::BeginGroup(); 
+				ImGui::BeginGroup(); // グループ開始
 
 				ImGui::Text("UVchecker");
 				ImGui::DragFloat2("UVTranslate", &uvTransformSprite.translate.x, 0.01f, -10.0f, 10.0f);
@@ -1508,7 +1539,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			if (ImGui::CollapsingHeader("Sprite")) {
 
-				ImGui::BeginGroup();
+				ImGui::BeginGroup(); // グループ開始
 
 				ImGui::Text("Sprite Transfom");
 				ImGui::SliderFloat("Sprite ScaleX", &transformSprite.scale.x, 0.1f, 10.0f);
@@ -1525,12 +1556,49 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 
 			ImGui::End();
+
+			//三角形を動かす処理
+			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
+			wvpData->World = worldMatrix;
+
+			//3次元的にする
+			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
+			Matrix4x4 viewMatrix = Inverse(cameraMatrix);
+			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
+			//WVPMatrixを作る
+			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
+			wvpData->wvp = worldViewProjectionMatrix;
+
+			//UVTransform用の行列
+			Matrix4x4 uvTransformMatrix = MakeScaleMatrix(uvTransformSprite.scale);
+			uvTransformMatrix = Multiply(uvTransformMatrix, MakeRotateZMatrix(uvTransformSprite.rotate.z));
+			uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
+			materialDataSprite->uvTransform = uvTransformMatrix;
+
+			// 行列の更新
+			Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
+			Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
+			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kClientWidth), float(kClientHeight), 0.0f, 100.0f);
+			Matrix4x4 worldViewProjectionMatrixSprite = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
+
+			transformationMatrixDataSprite->wvp = worldViewProjectionMatrixSprite;
+
+			Matrix4x4 billboardMatrix = MakeIdentity4x4();//単位行列
+			if (useBillboard) {
+				billboardMatrix = Multiply(backToFrontMatrix, cameraMatrix);
+				billboardMatrix.m[3][0] = 0.0f;//平行移動成分はいらない
+				billboardMatrix.m[3][1] = 0.0f;
+				billboardMatrix.m[3][2] = 0.0f;
+			}
+
 			uint32_t numInstance = 0;//描画すべきインスタンス数
 			for (uint32_t index = 0; index < kNumMaxInstance; ++index) {
 				if (particles[index].lifeTime <= particles[index].currentTime) {//生存期間を過ぎていたら更新せず描画対象にしない
 					continue;
 				}
-				Matrix4x4 worldMatrix = MakeAffineMatrix(particles[index].transform.scale, particles[index].transform.rotate, particles[index].transform.translate);
+				Matrix4x4 scaleMatrix = MakeScaleMatrix(particles[index].transform.scale);
+				Matrix4x4 translateMatrix = MakeTranslateMatrix(particles[index].transform.translate);
+				Matrix4x4 worldMatrix = scaleMatrix * billboardMatrix * translateMatrix;
 				Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
 				Matrix4x4 viewMatrix = Inverse(cameraMatrix);
 				Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
@@ -1544,6 +1612,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				instancingData[numInstance].color.w = alpha;
 				++numInstance;//生きているParticleの数を1つカウントする
 			}
+
 
 			//これから書き込むバックバッファのインデックスを取得	
 			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
@@ -1590,6 +1659,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 			//wvp用のCBufferの場所を設定
 			commandList->SetGraphicsRootDescriptorTable(1, instancingSrvHandleGPU);
@@ -1631,32 +1701,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			hr = commandList->Reset(commandAllocator.Get(), nullptr);
 			assert(SUCCEEDED(hr));
 
-			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
-			wvpData->World = worldMatrix;
-
-			//3次元的にする
-			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
-			Matrix4x4 viewMatrix = Inverse(cameraMatrix);
-			Matrix4x4 projectionMatrix = MakePerspectiveFovMatrix(0.45f, float(kClientWidth) / float(kClientHeight), 0.1f, 100.0f);
-			//WVPMatrixを作る
-			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
-			wvpData->wvp = worldViewProjectionMatrix;
-
-			//UVTransform用の行列
-			Matrix4x4 uvTransformMatrix = MakeScaleMatrix(uvTransformSprite.scale);
-			uvTransformMatrix = Multiply(uvTransformMatrix, MakeRotateZMatrix(uvTransformSprite.rotate.z));
-			uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
-			materialDataSprite->uvTransform = uvTransformMatrix;
-
-			// 行列の更新
-			Matrix4x4 worldMatrixSprite = MakeAffineMatrix(transformSprite.scale, transformSprite.rotate, transformSprite.translate);
-			Matrix4x4 viewMatrixSprite = MakeIdentity4x4();
-			Matrix4x4 projectionMatrixSprite = MakeOrthographicMatrix(0.0f, 0.0f, float(kClientWidth), float(kClientHeight), 0.0f, 100.0f);
-			Matrix4x4 worldViewProjectionMatrixSprite = Multiply(worldMatrixSprite, Multiply(viewMatrixSprite, projectionMatrixSprite));
-
-			transformationMatrixDataSprite->wvp = worldViewProjectionMatrixSprite;
-
 		}
+
 	}
 
 	//ImGuiの終了処理
@@ -1664,9 +1710,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
+	//開放
 	CloseHandle(fenceEvent);
 
 	CloseWindow(hwnd);
+
 
 	CoUninitialize();
 

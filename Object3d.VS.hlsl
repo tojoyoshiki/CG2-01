@@ -28,7 +28,7 @@ struct ParticleForGPU
 };
 
 ConstantBuffer<TransformationMatrix> gTransformationMatrix : register(b0);
-StructuredBuffer<ParticleForGPU> gTransformationMatrices: register(t0);
+//StructuredBuffer<ParticleForGPU> gTransformationMatrices: register(t0);
 
 struct VertexShaderInput
 {
@@ -43,8 +43,6 @@ VertexShaderOutput main(VertexShaderInput input)
     output.position = mul(input.position, gTransformationMatrix.wvp);
     output.texcoord = input.texcoord;
     output.normal = normalize(mul(input.normal, (float3x3) gTransformationMatrix.World));
-   
-    output.color = gParticle[InstanceID].color;
-    
     return output;
 }
+
