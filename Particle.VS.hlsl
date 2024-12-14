@@ -8,6 +8,7 @@ struct TransformationMatrix
 
 struct ParticleForGPU
 {
+   
     float4x4 wvp;
     float4x4 World;
     float4 color;
