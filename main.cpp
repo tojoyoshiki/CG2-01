@@ -46,10 +46,6 @@ struct Vector4 {
 	float w;
 };
 
-//struct Matrix3x3 {
-//	float m[3][3];
-//};
-
 struct Matrix4x4 {
 	float m[4][4];
 };
@@ -114,12 +110,20 @@ struct Emitter {
 	float frequencyTime;
 };
 
+struct AABB {
+	Vector3 min; // バウンディングボックスの最小座標
+	Vector3 max; // バウンディングボックスの最大座標
+};
+
+struct AccelerationField {
+	Vector3 acceleration;
+	AABB area;
+};
+
 // スカラーとの乗算のオーバーロード
 Vector3 operator*(const Vector3& vec, float scalar) {
 	return { vec.x * scalar, vec.y * scalar, vec.z * scalar };
 }
-
-
 
 // Vector3同士の乗算（必要であれば定義）
 Vector3 operator*(const Vector3& vec1, const Vector3& vec2) {
@@ -1642,6 +1646,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				particles.splice(particles.end(), Emit(emitter, randomEngine));
 				emitter.frequencyTime -= emitter.frequency;
 			}
+
+			//加速領域を作成します
+			AccelerationField accelerationField;
+			accelerationField.acceleration = { 15.0f,0.0f,0.0f };
+			accelerationField.area.min = { -1.0f,-1.0f,-1.0f };
+			accelerationField.area.max = { 1.0f,1.0f,1.0f };
 
 			uint32_t numInstance = 0;//描画すべきインスタンス数
 			for (std::list<Particle>::iterator particleIterator = particles.begin(); particleIterator != particles.end();) {
