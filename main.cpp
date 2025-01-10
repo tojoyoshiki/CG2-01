@@ -1492,7 +1492,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
 
-			ImGui::Begin("CG3ImGui");
+			ImGui::Begin("CG3");
 
 
 			if (ImGui::Button("Add Particle")) {
