@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <cstdint>
 #include <string>
+#include <DirectXMath.h>
 #include <format>
 #include <wrl.h>
 #include <algorithm>
@@ -9,7 +10,6 @@
 #include <cassert>
 #include <dxgidebug.h>
 #include <dxcapi.h>
-#include <cstdint>
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <assert.h>
@@ -18,6 +18,7 @@
 #include <numbers>
 #include <sstream>
 #include <random>
+using Microsoft::WRL::ComPtr;
 #include "externals/imgui/imgui.h"
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
@@ -28,6 +29,12 @@
 #pragma comment(lib,"dxcompiler.lib")
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+struct CameraData
+{
+	DirectX::XMFLOAT3 position;
+	float padding;
+};
 
 struct Vector2 {
 	float x;
@@ -81,9 +88,16 @@ struct Material {
 	Vector4 color;
 	int32_t enableLighting;
 	float padding[3];
+	float shininess;
 	Matrix4x4 uvTransform;
 };
-
+//struct Material
+//{
+//	DirectX::XMFLOAT4 color;
+//	int enableLighting;
+//	
+//	float padding[2];
+//};
 struct TransformationMatrix {
 	Matrix4x4 wvp;
 	Matrix4x4 World;
@@ -761,6 +775,63 @@ ModelData LoadObjFile(const std::string& directoryPath, const std::string& filen
 		}
 	}
 	return modelData;
+}
+
+ID3D12GraphicsCommandList* commandList = nullptr;
+ComPtr<ID3D12Resource> cameraBuffer;
+ComPtr<ID3D12Resource> materialBuffer;
+
+void InitializeBuffers(ID3D12Device* device)
+{
+	// Create camera buffer
+	D3D12_HEAP_PROPERTIES heapProperties = {};
+	heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+	D3D12_RESOURCE_DESC bufferDesc = {};
+	bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	bufferDesc.Width = sizeof(CameraData);
+	bufferDesc.Height = 1;
+	bufferDesc.DepthOrArraySize = 1;
+	bufferDesc.MipLevels = 1;
+	bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+	bufferDesc.SampleDesc.Count = 1;
+	bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	device->CreateCommittedResource(
+		&heapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&bufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&cameraBuffer)
+	);
+
+void UpdateCameraAndMaterialData(ID3D12GraphicsCommandList* commandList, CameraData* cameraData, Material* material, ID3D12Resource* cameraBuffer, ID3D12Resource* materialBuffer)
+{
+	// Update camera position
+	CameraData* mappedCameraData;
+	cameraBuffer->Map(0, nullptr, reinterpret_cast<void**>(&mappedCameraData));
+	*mappedCameraData = *cameraData;
+	cameraBuffer->Unmap(0, nullptr);
+
+	// Update material properties
+	Material* materialData;
+	materialBuffer->Map(0, nullptr, reinterpret_cast<void**>(&materialData));
+	*materialData = *material;
+	materialBuffer->Unmap(0, nullptr);
+
+	// Bind buffers to the pipeline
+	commandList->SetGraphicsRootConstantBufferView(2, cameraBuffer->GetGPUVirtualAddress());
+	commandList->SetGraphicsRootConstantBufferView(3, materialBuffer->GetGPUVirtualAddress());
+}
+
+void RenderUI(Material* material, bool* phongEnabled)
+{
+	ImGui::Begin("Settings");
+	ImGui::Checkbox("Enable Phong Lighting", phongEnabled);
+	ImGui::ColorEdit3("Material Color", reinterpret_cast<float*>(&material->color));
+	ImGui::SliderFloat("Shininess", &material->shininess, 1.0f, 128.0f);
+	ImGui::End();
 }
 
 //生成関数
@@ -1477,6 +1548,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart()
 	);
 
+	// Initialization
+	CameraData cameraData = { {0.0f, 0.0f, 0.0f}, 0.0f };
+	Material material = { {1.0f, 1.0f, 1.0f, 1.0f}, 1, 32.0f, {0.0f, 0.0f} };
+	bool phongEnabled = true;
+
 	MSG msg{};
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
@@ -1591,8 +1667,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			}
 
 			ImGui::End();
-			//開発用UIの処理。実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
 			//ImGui::ShowDemoWindow();
+
+			   // Update camera and material
+			UpdateCameraAndMaterialData(commandList, &cameraData, &material, cameraBuffer, materialBuffer);
+
+			// Render ImGui UI
+			RenderUI(&material, &phongEnabled);
 
 			//三角形を動かす処理
 			//transform.rotate.y += 0.01f;
