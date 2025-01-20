@@ -32,7 +32,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 struct CameraData
 {
-	DirectX::XMFLOAT3 position;
+	Vector4 position;
 	float padding;
 };
 
@@ -806,6 +806,19 @@ void InitializeBuffers(ID3D12Device* device)
 		IID_PPV_ARGS(&cameraBuffer)
 	);
 
+	// Create material buffer
+	bufferDesc.Width = sizeof(Material);
+
+	device->CreateCommittedResource(
+		&heapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&bufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&materialBuffer)
+	);
+}
+
 void UpdateCameraAndMaterialData(ID3D12GraphicsCommandList* commandList, CameraData* cameraData, Material* material, ID3D12Resource* cameraBuffer, ID3D12Resource* materialBuffer)
 {
 	// Update camera position
@@ -1549,9 +1562,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	);
 
 	// Initialization
-	CameraData cameraData = { {0.0f, 0.0f, 0.0f}, 0.0f };
-	Material material = { {1.0f, 1.0f, 1.0f, 1.0f}, 1, 32.0f, {0.0f, 0.0f} };
+	CameraData cameraData = { Vector4(0.0f, 0.0f, 0.0f, 0.0f), 0.0f };
+	Material material = { Vector4(1.0f, 1.0f, 1.0f, 1.0f), 1, 32.0f, {float(0.0f, 0.0f) } };
 	bool phongEnabled = true;
+
+	ID3D12Device* device = nullptr; // Replace with actual device initialization
+	InitializeBuffers(device);
 
 	MSG msg{};
 	//ウィンドウの×ボタンが押されるまでループ
@@ -1669,11 +1685,21 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui::End();
 			//ImGui::ShowDemoWindow();
 
-			   // Update camera and material
-			UpdateCameraAndMaterialData(commandList, &cameraData, &material, cameraBuffer, materialBuffer);
+		  // Update camera and material
+			UpdateCameraAndMaterialData(commandList, &cameraData, &material, cameraBuffer.Get(), materialBuffer.Get());
 
 			// Render ImGui UI
 			RenderUI(&material, &phongEnabled);
+
+			// Render scene with updated parameters
+			if (phongEnabled)
+			{
+				// Enable Phong shader
+			}
+			else
+			{
+				// Fallback to basic lighting
+			}
 
 			//三角形を動かす処理
 			//transform.rotate.y += 0.01f;
