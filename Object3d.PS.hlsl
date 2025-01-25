@@ -8,7 +8,7 @@ struct Material
     float4 color;
     int enableLighting;
     float4x4 uvTransform;
-    float shininess; // 追加
+    float shininess;
 };
 
 ConstantBuffer<Material> gMaterial : register(b0);
@@ -43,10 +43,7 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     // テクスチャサンプルを行う
     float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
-
-    // ピクセルの色を計算する
-    //output.color = gMaterial.color * textureColor;
-
+    
     if (gMaterial.enableLighting != 0)
     {
         float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
