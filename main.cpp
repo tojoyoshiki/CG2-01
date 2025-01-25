@@ -41,10 +41,6 @@ struct Vector4 {
 	float w;
 };
 
-//struct Matrix3x3 {
-//	float m[3][3];
-//};
-
 struct Matrix4x4 {
 	float m[4][4];
 };
@@ -84,7 +80,6 @@ struct CameraForGPU
 {
 	Vector3 worldPosition;
 };
-
 
 Matrix4x4 Inverse(const Matrix4x4& m) {
 	Matrix4x4 result;
@@ -361,7 +356,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 	if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wparam, lparam)) {
 		return true;
 	}
-
 	//メッセージに応じてゲーム固有の処理を行う
 	switch (msg) {
 		//ウィンドウが破棄された
@@ -413,8 +407,6 @@ IDxcBlob* CompileShader(const std::wstring& filePath,
 	IDxcCompiler3* dxcCompiler,
 	IDxcIncludeHandler* includeHandler)
 {
-
-
 	Log(ConvertString(std::format(L"Begin CompileShader,path:{},profile:{}\n", filePath, profile)));
 	IDxcBlobEncoding* shaderSource = nullptr;
 	HRESULT hr = dxcUtils->LoadFile(filePath.c_str(), nullptr, &shaderSource);
@@ -453,7 +445,6 @@ IDxcBlob* CompileShader(const std::wstring& filePath,
 	shaderResult->Release();
 
 	return shaderBlob;
-
 }
 
 
@@ -617,11 +608,20 @@ Transform uvTransformSprite{
 //SRV切り替え
 bool useMonsterBall = true;
 
+
+
+
+
+
+
+
+
+
+
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
-
 	CoInitializeEx(0, COINIT_MULTITHREADED);
-
 
 #pragma region Windowの生成
 	WNDCLASS wc{};
@@ -650,7 +650,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	//ウィンドウの生成
 	HWND hwnd = CreateWindow(
 		wc.lpszClassName,		//利用するクラス名
-		L"CG2",					//タイトルバーの文字( なんでも良い )
+		L"CG3",					//タイトルバーの文字( なんでも良い )
 		WS_OVERLAPPEDWINDOW,	//ウィンドウスタイル
 		CW_USEDEFAULT,			//表示X座標(Windowsに任せる)
 		CW_USEDEFAULT,			//表示Y座標(WindowsOSに任せる)
@@ -849,9 +849,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	rtvHandles[1].ptr = rtvHandles[0].ptr + device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	//2つ目を作る
 	device->CreateRenderTargetView(swapChainResource[1], &rtvDesc, rtvHandles[1]);
-
-
-
 
 	ID3D12Fence* fence = nullptr;
 	uint64_t fenceValue = 0;
@@ -1083,30 +1080,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 	}
 
-	////左下
-	//vertexData[0].position = { -0.5f,-0.5f,0.0f,1.0f };
-	//vertexData[0].texcoord = { 0.0f,1.0f };
-
-	////上
-	//vertexData[1].position = { 0.0f,0.5f,0.0f,1.0f };
-	//vertexData[1].texcoord = { 0.5f,0.0f };
-
-	////右下
-	//vertexData[2].position = { 0.5f,-0.5f,0.0f,1.0f };
-	//vertexData[2].texcoord = { 1.0f,1.0f };
-
-	////左下2
-	//vertexData[3].position = { -0.5f,-0.5f,0.5f,1.0f };
-	//vertexData[3].texcoord = { 0.0f,1.0f };
-
-	////上2
-	//vertexData[4].position = { 0.0f,0.0f,0.0f,1.0f };
-	//vertexData[4].texcoord = { 0.5f,0.0f };
-
-	////右下2
-	//vertexData[5].position = { 0.5f,-0.5f,-0.5f,1.0f };
-	//vertexData[5].texcoord = { 1.0f,1.0f };
-
 	//Sprite用の頂点リソースを作る
 	ID3D12Resource* vertexResourceSprite = CreateBufferResource(device, sizeof(VertexData) * 6);
 	//頂点バッファビューを作成する
@@ -1326,7 +1299,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart()
 	);
 
-
 	MSG msg{};
 	//ウィンドウの×ボタンが押されるまでループ
 	while (msg.message != WM_QUIT) {
@@ -1353,11 +1325,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			ImGui::DragFloat2("UVScale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
 			ImGui::SliderAngle("UVRotate", &uvTransformSprite.rotate.z);
 			ImGui::End();
-			//開発用UIの処理。実際に開発用のUIを出す場合はここをゲーム固有の処理に置き換える
-			//ImGui::ShowDemoWindow();
-
-
-
 			//これから書き込むバックバッファのインデックスを取得	
 			UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
@@ -1405,7 +1372,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
 			commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-
 			commandList->SetGraphicsRootConstantBufferView(0, materialResource->GetGPUVirtualAddress());
 			//wvp用のCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
@@ -1424,18 +1390,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 			commandList->SetGraphicsRootConstantBufferView(0, materialResourceSprite->GetGPUVirtualAddress());
 
-
 			//Spriteの描画。変更が必要なものだけ変更する
 			commandList->IASetVertexBuffers(0, 1, &vertexBufferViewSprite);//VBVを設定
 			//TransformationMatrixCBufferの場所を設定
 			commandList->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
-			//描画
-			//commandList->DrawInstanced(6, 1, 0, 0);
 
 			//IBVを設定
 			commandList->IASetIndexBuffer(&indexBufferViewSprite);
-			//描画。6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
-			//commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 			//実際のcommandListのImGuiの描画コマンドを積む
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
@@ -1466,10 +1427,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			assert(SUCCEEDED(hr));
 
 			//三角形を動かす処理
-			//transform.rotate.y += 0.01f;
 			Matrix4x4 worldMatrix = MakeAffineMatrix(transform.scale, transform.rotate, transform.translate);
 			wvpData->World = worldMatrix;
-
 
 			//3次元的にする
 			Matrix4x4 cameraMatrix = MakeAffineMatrix(cameraTransform.scale, cameraTransform.rotate, cameraTransform.translate);
@@ -1479,7 +1438,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			Matrix4x4 worldViewProjectionMatrix = Multiply(worldMatrix, Multiply(viewMatrix, projectionMatrix));
 			wvpData->wvp = worldViewProjectionMatrix;
 
-
 		}
 
 		//UVTransform用の行列
@@ -1487,21 +1445,14 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		uvTransformMatrix = Multiply(uvTransformMatrix, MakeRotateZMatrix(uvTransformSprite.rotate.z));
 		uvTransformMatrix = Multiply(uvTransformMatrix, MakeTranslateMatrix(uvTransformSprite.translate));
 		materialDataSprite->uvTransform = uvTransformMatrix;
-
-	}//ゲームループ終わり
-
-
-
+	}
 
 	//ImGuiの終了処理
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 
-	//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-	//				解放
-	//*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-
+	//開放処理
 	cameraResource->Release();
 	indexResourceSprite->Release();
 	materialResourceLight->Release();
@@ -1548,11 +1499,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		debug->ReportLiveObjects(DXGI_DEBUG_APP, DXGI_DEBUG_RLO_ALL);
 		debug->ReportLiveObjects(DXGI_DEBUG_D3D12, DXGI_DEBUG_RLO_ALL);
 		debug->Release();
-
 	}
 
 	CoUninitialize();
 
 	return 0;
-
 }
