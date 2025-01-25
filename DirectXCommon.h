@@ -37,7 +37,14 @@ public:
 	//コンバート
 	std::wstring ConvertString(const std::string& str);
 
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(
+		ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible);
+
 	ID3D12GraphicsCommandList* GetCommandList() { return commandList.Get(); }
+
+	ID3D12Device* GetDevice() { return device.Get(); }
+
+	IDXGISwapChain4* GetSwapChain() { return swapChain.Get(); }
 
 	//初期化
 	void Initialize(WinApp* winApp);
@@ -50,7 +57,7 @@ public:
 	//震度バッファの生成
 	void CreateDepthBuffer();
 	//各種ディスクリプタヒープの生成
-	void CreateDescriptorHeap();
+	void CreateDescriptorHeaps();
 	//レンダーターゲットビューの初期化
 	void RenderTargetViewInitialize();
 	//深度ステンシルビューの初期化
@@ -81,22 +88,28 @@ private:
 	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>,2> swapChainResources;
 	// スワップチェーン
 	Microsoft::WRL::ComPtr<IDXGISwapChain4> swapChain;
+	//
 	// RTV用ディスクリプタヒープ
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap;
 	// DSV用ディスクリプタヒープ
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap;
+	//
 
 	// コマンド関連
+	//
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator;
+	//
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList;
 
 	// フェンス
+	//
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
 	uint64_t fenceValue = 0;
 	HANDLE fenceEvent = nullptr;
+	//
 
-	// ビューポート
+	//0 ビューポート
 	D3D12_VIEWPORT viewport{};
 	// シザー矩形
 	D3D12_RECT scissorRect{};

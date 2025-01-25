@@ -1,10 +1,6 @@
 #include "DirectXCommon.h"
 #include <cassert>
 #include "externals/DirectXTex/d3dx12.h"
-#include <d3d10.h>
-#include <d3d11.h>
-using namespace ID3D12GraphicsCommandList;
-using namespace ID3D12Device;
 
 #pragma comment(lib,"d3d12.lib")
 #pragma comment(lib,"dxgi.lib")
@@ -73,6 +69,20 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateDepthStencilTextureR
 
 	return depthStencilBuffer;
 }
+
+Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DirectXCommon::CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible)
+{
+	//ディスクリプタヒープの生成
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap = nullptr;
+	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc{};
+	descriptorHeapDesc.Type = heapType;	//レンダーターゲットビュー用
+	descriptorHeapDesc.NumDescriptors = numDescriptors;
+	descriptorHeapDesc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;	//ダブルバッファ用に2つ。多くても構わない
+	HRESULT hr = device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap));
+	//ディスクリプタヒープが作れなかったので起動できない
+	assert(SUCCEEDED(hr));
+
+}
 //コンバート
 std::wstring ConvertString(const std::string& str) {
 	if (str.empty()) {
@@ -98,7 +108,7 @@ void DirectXCommon::Initialize(WinApp* winApp)
 
 void DirectXCommon::InitializeDevice()
 {
-	HRESULT hr;
+	//HRESULT hr;
 
 #ifdef _DEBUG
 
@@ -139,7 +149,7 @@ void DirectXCommon::InitializeDevice()
 		//ソフトウェアアダプタでなければ採用
 		if (!(adapterDesc.Flags & DXGI_ADAPTER_FLAG3_SOFTWARE)) {
 			//採用したアダプタの情報をログに出力。wstring の方なので注意
-			Log(ConvertString(std::format(L"Use Adapter:{}\n", adapterDesc.Description)));
+			Logger::Log(StringUtility::ConvertString(std::format(L"Use Adapter:{}\n", adapterDesc.Description)));
 			break;
 		}
 		useAdapter = nullptr;//ソフトウェアアダプタの場合は見なかったことにする
@@ -165,14 +175,14 @@ void DirectXCommon::InitializeDevice()
 		//指定した機能レベルでデバイスが生成できたかを確認
 		if (SUCCEEDED(hr)) {
 			//生成できたのでログ出力を行って
-			Log(std::format("FeatureLevel : {}\n", featureLevelStrings[i]));
+			Logger::Log(std::format("FeatureLevel : {}\n", featureLevelStrings[i]));
 			break;
 		}
 	}
 	//デバイスの生成がうまくいかなかったので起動できない
 	assert(device != nullptr);
 	//初期化完了のログを出す
-	Log("Complet create D3D12Device!!!\n");
+	Logger::Log("Complet create D3D12Device!!!\n");
 #pragma endregion
 
 #ifdef _DEBUG
@@ -293,22 +303,6 @@ void DirectXCommon::CreateDepthBuffer()
 #pragma region 利用するヒープの作成
 	//利用するヒープの設定
 
-	//DSV用のHeapでDiscriptorの数は1。DSVはShader内で触るものではないので、ShaderVisibleはfalse
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap = CreateDescriptorHeap(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, false);
-	{
-		//ディスクリプタヒープの生成
-		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap = nullptr;
-		D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc{};
-		descriptorHeapDesc.Type = heapType;	//レンダーターゲットビュー用
-		descriptorHeapDesc.NumDescriptors = numDescriptors;
-		descriptorHeapDesc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;	//ダブルバッファ用に2つ。多くても構わない
-		HRESULT hr = device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap));
-		//ディスクリプタヒープが作れなかったので起動できない
-		assert(SUCCEEDED(hr));
-
-		return descriptorHeap;
-	}
-
 	//DSVの設定
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;//Format。基本的にはResourceに合わせる
@@ -316,7 +310,7 @@ void DirectXCommon::CreateDepthBuffer()
 	device->CreateDepthStencilView(depthStencilResource.Get(), &dsvDesc, dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 	//出力ウィンドウへの文字出力ループを抜ける
-	Log("Hello,DirectX!\n");
+	Logger::Log("Hello,DirectX!\n");
 #pragma endregion
 
 #pragma region 深度地のクリア設定
@@ -348,7 +342,21 @@ void DirectXCommon::CreateDepthBuffer()
 }
 
 
-void DirectXCommon::CreateDescriptorHeap()
+Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible) {
+	//ディスクリプタヒープの生成
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptorHeap = nullptr;
+	D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc{};
+	descriptorHeapDesc.Type = heapType;	//レンダーターゲットビュー用
+	descriptorHeapDesc.NumDescriptors = numDescriptors;
+	descriptorHeapDesc.Flags = shaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;	//ダブルバッファ用に2つ。多くても構わない
+	HRESULT hr = device->CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&descriptorHeap));
+	//ディスクリプタヒープが作れなかったので起動できない
+	assert(SUCCEEDED(hr));
+
+	return descriptorHeap;
+}
+
+void DirectXCommon::CreateDescriptorHeaps()
 {
 #pragma region RTV用のDescriptorSizeを取得しておく
 	const uint32_t descriptorSizeRTV =
@@ -373,10 +381,10 @@ void DirectXCommon::CreateDescriptorHeap()
 #pragma region ディスクリプタヒープの生成
 
 	//RTV用のヒープでディスクリプタの数は2。RTVはShader内で触るものではないので、ShaderVisibleはfalse
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap = CreateDescriptorHeap(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 2, false);
 	//SRV用のヒープでディスクリプタの数は128。SRVはShader内で触るものなので、ShaderVisibleはtrue
 
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvDescriptorHeap = CreateDescriptorHeap(device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvDescriptorHeap = CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128, true);
 
 #pragma endregion
 
@@ -449,7 +457,6 @@ void DirectXCommon::CreateFence()
 
 void DirectXCommon::ViewportInitialize()
 {
-
 	D3D12_VIEWPORT viewport{};
 	viewport.Width = WinApp::kClientWidth;
 	viewport.Height = WinApp::kClientHeight;
@@ -485,7 +492,6 @@ void DirectXCommon::CreateDXCCompiler()
 
 void DirectXCommon::ImGuiInitialize()
 {
-
 	//Imguiの初期化
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -519,7 +525,6 @@ void DirectXCommon::ImGuiInitialize()
 	ImGui::DragFloat2("UVScale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
 	ImGui::SliderAngle("UVRotate", &uvTransformSprite.rotate.z);
 	ImGui::End();
-
 
 	//ImGuiの内部コマンドを生成する
 	ImGui::Render();
