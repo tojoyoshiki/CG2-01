@@ -8,7 +8,7 @@ struct Material
     float4 color;
     int enableLighting;
     float4x4 uvTransform;
-    float shininess;
+    float shininess; // 追加
 };
 
 ConstantBuffer<Material> gMaterial : register(b0);
@@ -43,7 +43,10 @@ PixelShaderOutput main(VertexShaderOutput input)
 
     // テクスチャサンプルを行う
     float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
-    
+
+    // ピクセルの色を計算する
+    //output.color = gMaterial.color * textureColor;
+
     if (gMaterial.enableLighting != 0)
     {
         float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
@@ -52,7 +55,10 @@ PixelShaderOutput main(VertexShaderOutput input)
         float3 toEye = normalize(gCamera.worldPosition - input.worldPosition); // カメラ方向
         float3 reflectLight = reflect(gDirectionalLight.direction, normalize(input.normal)); // 反射光
 
-        float specularPow = pow(saturate(dot(reflectLight, toEye)), gMaterial.shininess); // スペキュラー
+        float3 halfVector = normalize(-gDirectionalLight.direction + toEye); // ハーフベクトル
+        float NDotH = dot(normalize(input.normal), halfVector);
+        
+        float specularPow = pow(saturate(NDotH), gMaterial.shininess); // スペキュラー
 
         float3 diffuse = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * cos * gDirectionalLight.intensity; // 拡散反射
     
