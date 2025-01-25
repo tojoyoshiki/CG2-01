@@ -8,6 +8,7 @@ struct Material
     float4 color;
     int enableLighting;
     float4x4 uvTransform;
+    float shininess; // 追加
 };
 
 ConstantBuffer<Material> gMaterial : register(b0);
@@ -26,21 +27,42 @@ struct DirectionalLight
 
 ConstantBuffer<DirectionalLight> gDirectionalLight : register(b1);
 
+struct Camera
+{
+    float3 worldPosition;
+};
+
+ConstantBuffer<Camera> gCamera : register(b2);
+
 PixelShaderOutput main(VertexShaderOutput input)
 {
     PixelShaderOutput output;
 
-	//Materialを拡張する
+    //Materialを拡張する
     float4 transformedUV = mul(float4(input.texcoord, 0.0f, 1.0f), gMaterial.uvTransform);
 
-	// テクスチャサンプルを行う
+    // テクスチャサンプルを行う
     float4 textureColor = gTexture.Sample(gSampler, transformedUV.xy);
+
+    // ピクセルの色を計算する
+    //output.color = gMaterial.color * textureColor;
 
     if (gMaterial.enableLighting != 0)
     {
         float NdotL = dot(normalize(input.normal), -gDirectionalLight.direction);
         float cos = pow(NdotL * 0.5f + 0.5f, 2.0f);
-        output.color = gMaterial.color * textureColor * gDirectionalLight.color * cos * gDirectionalLight.intensity;
+    
+        float3 toEye = normalize(gCamera.worldPosition - input.worldPosition); // カメラ方向
+        float3 reflectLight = reflect(gDirectionalLight.direction, normalize(input.normal)); // 反射光
+
+        float specularPow = pow(saturate(dot(reflectLight, toEye)), gMaterial.shininess); // スペキュラー
+
+        float3 diffuse = gMaterial.color.rgb * textureColor.rgb * gDirectionalLight.color.rgb * cos * gDirectionalLight.intensity; // 拡散反射
+    
+        float3 specular = gDirectionalLight.color.rgb * gDirectionalLight.intensity * specularPow * float3(1.0f, 1.0f, 1.0f);
+    
+        output.color.rgb = diffuse + specular; // 合計色
+        output.color.a = gMaterial.color.a * textureColor.a; // 透明度
     }
     else
     {
