@@ -6,6 +6,8 @@
 #include <wrl.h>
 #include <string>
 #include <format>
+#include <assert.h>
+#include <cassert>
 #include "WinApp.h"
 #include "Logger.h"
 #include "StringUtility.h"
@@ -73,6 +75,12 @@ public:
 	//ImGuiの初期化
 	void ImGuiInitialize();
 
+	void LoadTexture(const std::string& filePath);
+
+	//描画前処理
+	//void PreDraw();
+	//void PostDraw();
+
 private:
 
 	HRESULT hr;
@@ -113,5 +121,15 @@ private:
 	D3D12_VIEWPORT viewport{};
 	// シザー矩形
 	D3D12_RECT scissorRect{};
+
+	Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = CompileShader(L"resources/shaders/Object3D.VS.hlsl", L"vs_6_0", dxcUtils, dxcCompiler, includeHnadler);
+	assert(vertexShaderBlob != nullptr);
+
+	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = CompileShader(L"resources/shaders/Object3D.PS.hlsl", L"ps_6_0", dxcUtils, dxcCompiler, includeHnadler);
+	assert(pixelShaderBlob != nullptr);
+
+	// SRVを作成するDescriptorHeapの場所を決める(2枚目)
+	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU2 = GetCPUDescriptorHandle(srvDescriptorHeap.Get(), descriptorSizeSRV, 2);
+	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2 = GetGPUDescriptorHandle(srvDescriptorHeap.Get(), descriptorSizeSRV, 2);
 };
 
