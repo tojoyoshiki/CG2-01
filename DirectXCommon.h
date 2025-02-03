@@ -67,15 +67,25 @@ public:
 		DXGI_FORMAT format = DXGI_FORMAT_D32_FLOAT);
 	//コンバート
 	std::wstring ConvertString(const std::string& str);
-
+	//コンパイルシェーダー
+	Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(const std::wstring& filePath,
+		const wchar_t* profile);
+	//ディスクリプタヒープ作成
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(
 		ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible);
+	//頂点バッファ
+	Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t size);
+	//テクスチャデータ転送
+	void UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, 
+		const DirectX::ScratchImage& mipImages);
+	//テクスチャーロード
+	void LoadTexture(const std::string& filePath);
 
+	//Getter
 	ID3D12GraphicsCommandList* GetCommandList() { return commandList.Get(); }
-
 	ID3D12Device* GetDevice() { return device.Get(); }
-
 	IDXGISwapChain4* GetSwapChain() { return swapChain.Get(); }
+	ID3D12GraphicsCommandList* GetCommandList() const { return commandList.Get(); }
 
 	//初期化
 	void Initialize(WinApp* winApp);
@@ -104,8 +114,6 @@ public:
 	//ImGuiの初期化
 	void ImGuiInitialize();
 
-	void LoadTexture(const std::string& filePath);
-
 	//描画前処理
 	void PreDraw();
 	void PostDraw();
@@ -130,6 +138,12 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12Device> device;
 	//DXGIファクトリー
 	Microsoft::WRL::ComPtr<IDXGIFactory7> dxgiFactory;
+	//読み込みと管理など
+	IDxcUtils* dxcUtils;
+	//コンパイラ
+	IDxcCompiler3* dxcCompiler;
+	//include処理ハンドル
+	IDxcIncludeHandler* includeHandler;
 	//デバッグコントローラー
 	Microsoft::WRL::ComPtr<ID3D12Debug>debugController = nullptr;
 	//WindowsAPI
@@ -138,13 +152,26 @@ private:
 	std::array<Microsoft::WRL::ComPtr<ID3D12Resource>,2> swapChainResources;
 	// スワップチェーン
 	Microsoft::WRL::ComPtr<IDXGISwapChain4> swapChain;
-	//
+	
 	// RTV用ディスクリプタヒープ
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvDescriptorHeap;
 	// DSV用ディスクリプタヒープ
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvDescriptorHeap;
-	//
+	//SRV用ディスクリプタヒープ
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> srvDescriptorHeap;
 
+	//DescriptorSizeを取得しておく
+	uint32_t descriptorSizeSRV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	const uint32_t descriptorSizeRTV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	const uint32_t descriptorSizeDSV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+	//DescriptorSizeを取得しておく
+	const uint32_t descriptorSizeSRV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	const uint32_t descriptorSizeRTV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	const uint32_t descriptorSizeDSV = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU2 = GetCPUDescriptorHandle(srvDescriptorHeap.Get(), descriptorSizeSRV, 2);
+	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2 = GetGPUDescriptorHandle(srvDescriptorHeap.Get(), descriptorSizeSRV, 2);
 	// コマンド関連
 	//
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> commandQueue;

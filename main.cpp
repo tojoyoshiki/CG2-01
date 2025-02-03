@@ -946,7 +946,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// SRVの生成
 	dxCommon->GetDevice()->CreateShaderResourceView(textureResource2.Get(), &srvDesc2, textureSrvHandleCPU2);
 
-
 	float TrigerCheck = 2.0f;
 
 	//ポインタ初期化
@@ -1047,9 +1046,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
-
-	CloseHandle(fenceEvent);
-
+	
+	CloseHandle(dxCommon->fenceEvent);
 
 	return 0;
 }
