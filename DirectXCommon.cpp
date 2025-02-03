@@ -166,7 +166,6 @@ void DirectXCommon::InitializeDevice()
 		D3D_FEATURE_LEVEL_12_2,D3D_FEATURE_LEVEL_12_1,D3D_FEATURE_LEVEL_12_0
 	};
 
-
 	const char* featureLevelStrings[] = { "12.2","12.1","12.0" };
 	//高い順に生成できるか試していく
 	for (size_t i = 0; _countof(featureLevels); ++i) {
@@ -201,9 +200,7 @@ void DirectXCommon::InitializeDevice()
 		filter.DenyList.pSeverityList = severities;
 		infoQueue->PushStorageFilter(&filter);
 	}
-
 #endif
-
 }
 
 void DirectXCommon::CommandInitialize()
@@ -445,7 +442,6 @@ void DirectXCommon::DepthStencilViewInitialize()
 
 void DirectXCommon::CreateFence()
 {
-
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence = nullptr;
 	uint64_t fenceValue = 0;
 	hr = device->CreateFence(fenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
@@ -485,8 +481,8 @@ void DirectXCommon::CreateDXCCompiler()
 	hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&dxcCompiler));
 	assert(SUCCEEDED(hr));
 
-	IDxcIncludeHandler* includeHnadler = nullptr;
-	hr = dxcUtils->CreateDefaultIncludeHandler(&includeHnadler);
+	IDxcIncludeHandler* includeHandler = nullptr;
+	hr = dxcUtils->CreateDefaultIncludeHandler(&includeHandler);
 	assert(SUCCEEDED(hr));
 }
 
@@ -535,7 +531,7 @@ void DirectXCommon::LoadTexture(const std::string& filePath)
 	//テクスチャファイルを読んでプログラムを扱えるようにする
 	DirectX::ScratchImage image{};
 	std::wstring filePathW = ConvertString(filePath);
-	HRESULT hr = DirectX::LoadFromWICFile(filePathW.c_str(), DirectX::WIC_FLAGS_FORCE_SRGB, nullptr, image);
+	HRESULT hr = DirectX::LoadFromWICFile(filePathW.c_str(), dxCommon->WIC_FLAGS_FORCE_SRGB, nullptr, image);
 	assert(SUCCEEDED(hr));
 
 	//MipMapの作成
@@ -549,12 +545,34 @@ void DirectXCommon::LoadTexture(const std::string& filePath)
 
 void DirectXCommon::PreDraw()
 {
+
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	//色を変えるImGuiの処理
+	ImGui::Begin("Setting");
+	// ColorEdit3を使用して色を選択
+	ImGui::DragFloat3("CameraTransform", &cameraTransform.translate.x, 0.01f);
+	ImGui::DragFloat3("cameraRotate", &cameraTransform.rotate.x, 0.01f);
+	ImGui::SliderAngle("RotateX", &transform.rotate.x);
+	ImGui::SliderAngle("RotateY", &transform.rotate.y);
+	ImGui::SliderAngle("RotateZ", &transform.rotate.z);
+	ImGui::Checkbox("useMonsterBall", &useMonsterBall);
+	ImGui::SliderInt("Light", &materialData->enableLighting, 0, 1);
+	ImGui::SliderFloat3("LightDirector", &directionalLightData->direction.x, -1.0f, 1.0f);
+	ImGui::DragFloat2("UVTranslate", &uvTransformSprite.translate.x, 0.01f, -10.0f, 10.0f);
+	ImGui::DragFloat2("UVScale", &uvTransformSprite.scale.x, 0.01f, -10.0f, 10.0f);
+	ImGui::SliderAngle("UVRotate", &uvTransformSprite.rotate.z);
+	ImGui::End();
+
 	//バックバッファのインデックスを取得	
 	UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
 	//TransitionBarrierの設定
 	D3D12_RESOURCE_BARRIER barrier{};
-	//今回のバリアはTransition
+	
+	//リソースバリアで書き込み可能に変更
 	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
 	barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 	//バリアを張る対象のリソース。現在のバックバッファに対して行う
@@ -564,21 +582,74 @@ void DirectXCommon::PreDraw()
 	//遷移後のResourceState
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
 	//TransitionBarrierを張る
-	dxCommon->GetCommandList()->ResourceBarrier(1, &barrier);
+	GetCommandList()->ResourceBarrier(1, &barrier);
 
-	//描画先のRTVを設定する
-	dxCommon->GetCommandList()->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
+	//描画先のRTVとDSVを設定する
+	GetCommandList()->OMSetRenderTargets(1, &rtvHandles[backBufferIndex], false, &dsvHandle);
+	GetCommandList()->OMSetRenderTargets(1, &dsvHandle[backBufferIndex], false, &rtvHandles);
 
-	//dsv
+	//画面全体の色をクリア
+	float clearColor[] = { 0.1f,0.25f,0.5f,1.0f };
+	commandList->ClearRenderTargetView(
+		rtvHandles[backBufferIndex], clearColor, 0, nullptr);
 
-	//input更新
-	input->Update();
+	//画面全体の深度をクリア
+	commandList->ClearDepthStencilView(dsvHandle,
+		D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+	//描画用のDescriptorHeapの設定
+	ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap.Get() };
+	commandList->SetDescriptorHeaps(1, descriptorHeaps);
+
+	//ビューポート領域のせってい
+	GetCommandList()->RSSetViewports(1, &viewport);
+	//シザー矩形の設定
+	GetCommandList()->RSSetScissorRects(1, &scissorRect);
+	//ImGuiの内部コマンドを生成する
+	ImGui::Render();
 
 	//描画
-	dxCommon->GetCommandList()->RSSetViewports(1, &viewport);
-	dxCommon->GetCommandList()->RSSetScissorRects(1, &scissorRect);
+	commandList->RSSetViewports(1, &viewport);
+	commandList->RSSetScissorRects(1, &scissorRect);
+	commandList->SetGraphicsRootSignature(rootSignature.Get());
+	commandList->SetPipelineState(graphicsPipelineState.Get());
+	commandList->IASetVertexBuffers(0, 1, &vertexBufferView);
+	commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }
 
 void DirectXCommon::PostDraw()
 {
+	//バックバッファのインデックスを取得	
+	UINT backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+
+	//TransitionBarrierの設定
+	D3D12_RESOURCE_BARRIER barrier{};
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+	commandList->ResourceBarrier(1, &barrier);
+
+	//コマンドリストの内容を確定させる。全てのコマンドを積んでからCloseすること
+	hr = commandList->Close();
+	assert(SUCCEEDED(hr));
+
+	ID3D12CommandList* commandLists[] = { GetCommandList() };
+	commandQueue->ExecuteCommandLists(1, commandLists);
+	swapChain->Present(1, 0);
+
+	//
+	fenceValue++;
+	commandQueue->Signal(fence.Get(), fenceValue);
+
+	//
+	if (fence->GetCompletedValue() < fenceValue) {
+		fence->SetEventOnCompletion(fenceValue, fenceEvent);
+		WaitForSingleObject(fenceEvent, INFINITE);
+	}
+
+	//
+	hr = commandAllocator->Reset();
+	assert(SUCCEEDED(hr));
+	//
+	hr = GetCommandList()->Reset(commandAllocator.Get(), nullptr);
+	assert(SUCCEEDED(hr));
 }

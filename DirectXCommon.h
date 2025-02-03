@@ -6,7 +6,6 @@
 #include <wrl.h>
 #include <string>
 #include <format>
-#include <assert.h>
 #include <cassert>
 #include "WinApp.h"
 #include "Logger.h"
@@ -19,6 +18,36 @@
 class DirectXCommon
 {
 public:
+	struct Vector3 {
+		float x;
+		float y;
+		float z;
+	};
+	struct Vector4 {
+		float x;
+		float y;
+		float z;
+		float w;
+	};
+	struct Matrix4x4 {
+		float m[4][4];
+	};
+	struct Transform {
+		Vector3 scale;
+		Vector3 rotate;
+		Vector3 translate;
+	};
+	struct Material {
+		Vector4 color;
+		int32_t enableLighting;
+		float padding[3];
+		Matrix4x4 uvTransform;
+	};
+	struct DirectionalLight {
+		Vector4 color;
+		Vector3 direction;
+		float intensity;
+	};
 	//ディスクリプタヒープ生成関数
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>
 		CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE heapType,
@@ -78,12 +107,25 @@ public:
 	void LoadTexture(const std::string& filePath);
 
 	//描画前処理
-	//void PreDraw();
-	//void PostDraw();
+	void PreDraw();
+	void PostDraw();
 
 private:
 
 	HRESULT hr;
+	Transform transform{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f},{0.0f,0.0f,0.0f} };
+	Transform cameraTransform{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f} ,{0.0f,0.0f,-10.0f} };
+	Transform transformSprite{ {1.0f,1.0f,1.0f},{0.0f,0.0f,0.0f},{0.0f,0.0f,0.0f} };
+	Transform uvTransformSprite{
+		{1.0f,1.0f,1.0f},
+		{0.0f,0.0f,0.0f},
+		{0.0f,0.0f,0.0f},
+	};
+	//SRV切り替え
+	bool useMonsterBall = true;
+	Material* materialData = nullptr;
+	//Light用マテリアルリソース
+	DirectionalLight* directionalLightData = nullptr;
 	//DirectXデバイス
 	Microsoft::WRL::ComPtr<ID3D12Device> device;
 	//DXGIファクトリー
@@ -122,14 +164,6 @@ private:
 	// シザー矩形
 	D3D12_RECT scissorRect{};
 
-	Microsoft::WRL::ComPtr<IDxcBlob> vertexShaderBlob = CompileShader(L"resources/shaders/Object3D.VS.hlsl", L"vs_6_0", dxcUtils, dxcCompiler, includeHnadler);
-	assert(vertexShaderBlob != nullptr);
 
-	Microsoft::WRL::ComPtr<IDxcBlob> pixelShaderBlob = CompileShader(L"resources/shaders/Object3D.PS.hlsl", L"ps_6_0", dxcUtils, dxcCompiler, includeHnadler);
-	assert(pixelShaderBlob != nullptr);
-
-	// SRVを作成するDescriptorHeapの場所を決める(2枚目)
-	D3D12_CPU_DESCRIPTOR_HANDLE textureSrvHandleCPU2 = GetCPUDescriptorHandle(srvDescriptorHeap.Get(), descriptorSizeSRV, 2);
-	D3D12_GPU_DESCRIPTOR_HANDLE textureSrvHandleGPU2 = GetGPUDescriptorHandle(srvDescriptorHeap.Get(), descriptorSizeSRV, 2);
 };
 
