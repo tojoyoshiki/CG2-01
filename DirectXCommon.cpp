@@ -44,7 +44,7 @@ void DirectXCommon::Initialize(WinApp* winApp)
 	ImGuiInitialize();
 }
 
-ID3D12Resource* CreateTextureResource(ID3D12Device* device, const DirectX::TexMetadata& metadata) {
+Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(ID3D12Device* device, const DirectX::TexMetadata& metadata) {
 
 	D3D12_RESOURCE_DESC resourceDesc{};
 	resourceDesc.Width = UINT(metadata.width);//幅
@@ -57,17 +57,17 @@ ID3D12Resource* CreateTextureResource(ID3D12Device* device, const DirectX::TexMe
 
 	//利用するHeapの設定
 	D3D12_HEAP_PROPERTIES heapProperties{};
-	heapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;
+	heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;/*
 	heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
-	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
+	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;*/
 
 	//Resouceの生成
-	ID3D12Resource* resource = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12Resource> resource = nullptr;
 	HRESULT hr = device->CreateCommittedResource(
 		&heapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_COPY_DEST,
 		nullptr,
 		IID_PPV_ARGS(&resource)
 	);
@@ -256,11 +256,11 @@ Microsoft::WRL::ComPtr<IDxcBlob> DirectXCommon::CompileShader(const std::wstring
 
 	Microsoft::WRL::ComPtr<IDxcResult> shaderResult = nullptr;
 	hr = dxcCompiler->Compile(&shaderSourceBuffer, arguments, 
-		_countof(arguments), includeHandler, IID_PPV_ARGS(&shaderResult));
+		_countof(arguments), includeHandler.Get(), IID_PPV_ARGS(&shaderResult));
 
 	assert(SUCCEEDED(hr));
 
-	IDxcBlobUtf8* shaderError = nullptr;
+	Microsoft::WRL::ComPtr <IDxcBlobUtf8> shaderError = nullptr;
 	shaderResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&shaderError), nullptr);
 	if (shaderError != nullptr && shaderError->GetStringLength() != 0) {
 		Logger::Log(shaderError->GetStringPointer());
@@ -436,34 +436,34 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateDepthStencilTextureR
 		}
 }
 
-Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(ID3D12Device* device, const DirectX::TexMetadata& metadata)
-{
-	//生成するResourceの設定
-	D3D12_RESOURCE_DESC resourceDesc{};
-	resourceDesc.Width = UINT(metadata.width);//Textureの幅
-	resourceDesc.Height = UINT(metadata.height);//Textureの高さ
-	resourceDesc.MipLevels = UINT(metadata.mipLevels);//MipMapの数
-	resourceDesc.DepthOrArraySize = UINT(metadata.arraySize);//奥行き or 配列Textureの配列数
-	resourceDesc.Format = metadata.format;//DepthStencilとして利用可能なフォーマット
-	resourceDesc.SampleDesc.Count = 1;//サンプリングカウント。1固定
-	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension);//2次元
-
-	//利用するHeapの設定。非常に特殊
-	D3D12_HEAP_PROPERTIES heapProperties{};
-	heapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;//細かい設定を行う
-	heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;//WriteBackポリシーでCPUアクセス可能
-	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;//プロセッサの近くに配置
-	hr = device->CreateCommittedResource(
-		&heapProperties,//Heapの設定
-		D3D12_HEAP_FLAG_NONE,//Heapの特殊な設定
-		&resourceDesc,//Resourceの設定
-		D3D12_RESOURCE_STATE_GENERIC_READ,//作成するResourceのポインタへのポインタ
-		nullptr,//Clearの最高値。使わないのでnullptr
-		IID_PPV_ARGS(&createTextureResource));
-	assert(SUCCEEDED(hr));
-
-	return createTextureResource;
-}
+//Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(ID3D12Device* device, const DirectX::TexMetadata& metadata)
+//{
+//	//生成するResourceの設定
+//	D3D12_RESOURCE_DESC resourceDesc{};
+//	resourceDesc.Width = UINT(metadata.width);//Textureの幅
+//	resourceDesc.Height = UINT(metadata.height);//Textureの高さ
+//	resourceDesc.MipLevels = UINT(metadata.mipLevels);//MipMapの数
+//	resourceDesc.DepthOrArraySize = UINT(metadata.arraySize);//奥行き or 配列Textureの配列数
+//	resourceDesc.Format = metadata.format;//DepthStencilとして利用可能なフォーマット
+//	resourceDesc.SampleDesc.Count = 1;//サンプリングカウント。1固定
+//	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION(metadata.dimension);//2次元
+//
+//	//利用するHeapの設定。非常に特殊
+//	D3D12_HEAP_PROPERTIES heapProperties{};
+//	heapProperties.Type = D3D12_HEAP_TYPE_CUSTOM;//細かい設定を行う
+//	heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;//WriteBackポリシーでCPUアクセス可能
+//	heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;//プロセッサの近くに配置
+//	hr = device->CreateCommittedResource(
+//		&heapProperties,//Heapの設定
+//		D3D12_HEAP_FLAG_NONE,//Heapの特殊な設定
+//		&resourceDesc,//Resourceの設定
+//		D3D12_RESOURCE_STATE_GENERIC_READ,//作成するResourceのポインタへのポインタ
+//		nullptr,//Clearの最高値。使わないのでnullptr
+//		IID_PPV_ARGS(&createTextureResource));
+//	assert(SUCCEEDED(hr));
+//
+//	return createTextureResource;
+//}
 
 
 //Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible) {
@@ -550,7 +550,7 @@ void DirectXCommon::CreateFence()
 
 void DirectXCommon::ViewportInitialize()
 {
-	D3D12_VIEWPORT viewport{};
+//	D3D12_VIEWPORT viewport{};
 	viewport.Width = WinApp::kClientWidth;
 	viewport.Height = WinApp::kClientHeight;
 	viewport.TopLeftX = 0;
@@ -561,7 +561,7 @@ void DirectXCommon::ViewportInitialize()
 
 void DirectXCommon::ScissorRectInitialize()
 {
-	D3D12_RECT scissorRect{};
+	//D3D12_RECT scissorRect{};
 	scissorRect.left = 0;
 	scissorRect.right = WinApp::kClientWidth;
 	scissorRect.top = 0;
@@ -601,7 +601,6 @@ void DirectXCommon::CreateGraphicsPipeline(const D3D12_GRAPHICS_PIPELINE_STATE_D
 	assert(SUCCEEDED(hr));
 }
 
-//これ
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(ID3D12Resource* texture, 
 	const DirectX::ScratchImage& mipImages, ID3D12Device* device, ID3D12GraphicsCommandList* commandList)
 {
@@ -609,9 +608,10 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(ID3D12Re
 	DirectX::PrepareUpload(device, mipImages.GetImages(), mipImages.GetImageCount(), 
 		mipImages.GetMetadata(), subresources);
 
-	uint64_t intermediaSize = GetRequiredIntermediateSize(texture, 0, UINT(subresources.size()));
-	Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource = CreateBufferResource(intermediaSize);
-	UpdateSubresources(commandList, texture, intermediateResource.Get(), 0, 0, UINT(subresources.size()), subresources.data());
+	uint64_t intermediateSize = GetRequiredIntermediateSize(texture, 0, UINT(subresources.size()));
+	Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource = CreateBufferResource(intermediateSize);
+	UpdateSubresources(commandList, texture,
+		intermediateResource.Get(), 0, 0, UINT(subresources.size()), subresources.data());
 
 	D3D12_RESOURCE_BARRIER barrier{};
 	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -620,6 +620,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::UploadTextureData(ID3D12Re
 	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+
 	commandList->ResourceBarrier(1, &barrier);
 
 	return intermediateResource;
@@ -683,7 +684,7 @@ void DirectXCommon::PreDraw()
 
 	//描画用のDescriptorHeapの設定
 	ID3D12DescriptorHeap* descriptorHeaps[] = { srvDescriptorHeap.Get() };
-	commandList->SetDescriptorHeaps(1, descriptorHeaps);
+	commandList.Get()->SetDescriptorHeaps(1, descriptorHeaps);
 
 	//ビューポート領域のせってい
 	GetCommandList()->RSSetViewports(1, &viewport);
@@ -716,12 +717,12 @@ void DirectXCommon::PostDraw()
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
 	commandList->ResourceBarrier(1, &barrier);
 
-	ID3D12CommandList* commandLists[] = { GetCommandList().Get()};
 
 	//コマンドリストの内容を確定させる。全てのコマンドを積んでからCloseすること
 	hr = commandList->Close();
 	assert(SUCCEEDED(hr));
 
+	ID3D12CommandList* commandLists[] = { GetCommandList().Get()};
 	commandQueue->ExecuteCommandLists(1, commandLists);
 	swapChain->Present(1, 0);
 

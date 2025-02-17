@@ -76,10 +76,9 @@ public:
 		ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, UINT numDescriptors, bool shaderVisible);
 	
 	Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(size_t size);
-	//テクスチャデータ転送
-	//void UploadTextureData(Microsoft::WRL::ComPtr<ID3D12Resource> texture, 
-	//	const DirectX::ScratchImage& mipImages);
 	
+	//テクスチャデータ転送
+	[[nodiscard]]
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadTextureData(ID3D12Resource* texture, const DirectX::ScratchImage& mipImages, ID3D12Device* device,
 		ID3D12GraphicsCommandList* commandList);
 
@@ -167,11 +166,11 @@ private:
 	//DXGIファクトリー
 	Microsoft::WRL::ComPtr<IDXGIFactory7>dxgiFactory = nullptr;
 	//読み込みと管理など
-	IDxcUtils* dxcUtils;
+	Microsoft::WRL::ComPtr <IDxcUtils> dxcUtils;
 	//コンパイラ
-	IDxcCompiler3* dxcCompiler;
+	Microsoft::WRL::ComPtr <IDxcCompiler3> dxcCompiler;
 	//include処理ハンドル
-	IDxcIncludeHandler* includeHandler;
+	Microsoft::WRL::ComPtr <IDxcIncludeHandler> includeHandler;
 	//デバッグコントローラー
 	Microsoft::WRL::ComPtr<ID3D12Debug1> debugController = nullptr;;
 

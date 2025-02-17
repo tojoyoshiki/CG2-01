@@ -393,7 +393,8 @@ Microsoft::WRL::ComPtr<ID3D12Resource> CreateBufferResource(ID3D12Device* device
 	vertexResourceDesc.SampleDesc.Count = 1;
 	vertexResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 	Microsoft::WRL::ComPtr<ID3D12Resource> vertexResource = nullptr;
-	HRESULT hr = device->CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE, &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
+	HRESULT hr = device->CreateCommittedResource(&uploadHeapProperties, 
+		D3D12_HEAP_FLAG_NONE, &vertexResourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&vertexResource));
 	assert(SUCCEEDED(hr));
 
 	return vertexResource;
@@ -803,13 +804,15 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	DirectX::ScratchImage mipImages = dxCommon->LoadTexture("./resources/uvChecker.png");
 	const DirectX::TexMetadata& metadata = mipImages.GetMetadata();
 	Microsoft::WRL::ComPtr<ID3D12Resource> textureResource = dxCommon->CreateTextureResource(dxCommon->GetDevice().Get(), metadata);
-	dxCommon->UploadTextureData(textureResource.Get(), mipImages, dxCommon->GetDevice().Get(), dxCommon->GetCommandList().Get());
+	Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource1 = dxCommon->UploadTextureData(textureResource.Get(), mipImages, dxCommon->GetDevice().Get(), dxCommon->GetCommandList().Get());
+	
+
 
 	//2枚目のTextureを読んで転送する
 	DirectX::ScratchImage mipImage2 = dxCommon->LoadTexture(modelData.material.textureFilePath);
 	const DirectX::TexMetadata metadata2 = mipImage2.GetMetadata();
 	Microsoft::WRL::ComPtr<ID3D12Resource> textureResource2 = dxCommon->CreateTextureResource(dxCommon->GetDevice().Get(), metadata2);
-	dxCommon->UploadTextureData(textureResource2.Get(), mipImage2, dxCommon->GetDevice().Get(), dxCommon->GetCommandList().Get());
+	Microsoft::WRL::ComPtr<ID3D12Resource> intermediateResource2 = dxCommon->UploadTextureData(textureResource2.Get(), mipImage2, dxCommon->GetDevice().Get(), dxCommon->GetCommandList().Get());
 
 	//metaData2を基にSRVの設定( 2枚目 )
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc2{};
@@ -961,7 +964,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//wvp用のCBufferの場所を設定
 			dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(1, wvpResource->GetGPUVirtualAddress());
 
-
 			//SRVを切り替える
 			dxCommon->GetCommandList()->SetGraphicsRootDescriptorTable(2, useMonsterBall ? textureSrvHandleGPU2 : textureSrvHandleGPU);
 
@@ -979,12 +981,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			//TransformationMatrixCBufferの場所を設定
 			dxCommon->GetCommandList()->SetGraphicsRootConstantBufferView(1, transformationMatrixResourceSprite->GetGPUVirtualAddress());
 			//描画
-			//commandList->DrawInstanced(6, 1, 0, 0);
+			dxCommon->GetCommandList()->DrawInstanced(6, 1, 0, 0);
 
 			//IBVを設定
 			dxCommon->GetCommandList()->IASetIndexBuffer(&indexBufferViewSprite);
 			//描画。6個のインデックスを使用し1つのインスタンスを描画。その他は当面0で良い
-			//commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+			dxCommon->GetCommandList()->DrawIndexedInstanced(6, 1, 0, 0, 0);
 
 			//実際のcommandListのImGuiの描画コマンドを積む
 			ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), dxCommon->GetCommandList().Get());
