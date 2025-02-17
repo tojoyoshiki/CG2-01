@@ -3,6 +3,7 @@
 #include "externals/imgui/imgui_impl_dx12.h"
 #include "externals/imgui/imgui_impl_win32.h"
 
+#pragma comment(lib,"winmm.lib")
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 LRESULT CALLBACK WinApp::WindowProc(HWND hwnd, 
@@ -27,6 +28,9 @@ LRESULT CALLBACK WinApp::WindowProc(HWND hwnd,
 void WinApp::Initialize()
 {
 #pragma region ウインドウ生成の設定
+
+	//システムタイマーの分解能を上げる
+	timeBeginPeriod(1);
 
 	//メインスレッドではMTAでCOM使う
 	HRESULT hr =CoInitializeEx(0, COINIT_MULTITHREADED);

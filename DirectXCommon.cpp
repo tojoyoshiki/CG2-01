@@ -42,6 +42,8 @@ void DirectXCommon::Initialize(WinApp* winApp)
 	CreateDXCCompiler();
 	//ImGuiの初期化
 	ImGuiInitialize();
+	//FPS初期化
+	InitializeFixFPS();
 }
 
 Microsoft::WRL::ComPtr<ID3D12Resource> DirectXCommon::CreateTextureResource(ID3D12Device* device, const DirectX::TexMetadata& metadata) {
@@ -726,6 +728,8 @@ void DirectXCommon::PostDraw()
 	commandQueue->ExecuteCommandLists(1, commandLists);
 	swapChain->Present(1, 0);
 
+	UpdateFixFPS();
+
 	//
 	fenceValue++;
 	commandQueue->Signal(fence.Get(), fenceValue);
@@ -742,6 +746,32 @@ void DirectXCommon::PostDraw()
 	//
 	hr = GetCommandList()->Reset(commandAllocator.Get(), nullptr);
 	assert(SUCCEEDED(hr));
+}
+
+void DirectXCommon::InitializeFixFPS()
+{
+	reference_ = std::chrono::steady_clock::now();
+}
+
+void DirectXCommon::UpdateFixFPS()
+{
+	//1/60秒ぴったりの時間
+	const std::chrono::microseconds kMinTime(uint64_t(1000000.0f / 60.0f));
+    //1/60秒よりわずかに短い時間
+	const std::chrono::microseconds kMinCheckTime(uint64_t(1000000.0f / 65.0f));
+
+	//現在時間を取得する
+	std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+//範囲記録からの経過時間を取得する
+	std::chrono::microseconds elapsed =
+		std::chrono::duration_cast<std::chrono::microseconds>(now - reference_);
+
+	if (elapsed < kMinCheckTime) {
+		while (std::chrono::steady_clock::now() - reference_ < kMinTime) {
+			std::this_thread::sleep_for(std::chrono::microseconds(1));
+		}
+	}
+	reference_ = std::chrono::steady_clock::now();
 }
 
 void DirectXCommon::Finalize()

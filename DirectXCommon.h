@@ -9,6 +9,8 @@
 #include<dxcapi.h>
 #include <cassert>
 #include <vector>
+#include <chrono>
+#include <thread>
 #include "Logger.h"
 #include "StringUtility.h"
 #pragma comment(lib, "d3d12.lib")
@@ -233,5 +235,12 @@ private:
 
 	// Resourceの生成
 	Microsoft::WRL::ComPtr<ID3D12Resource> depthStencilResource = nullptr;
+
+	//FPS固定初期化
+	void InitializeFixFPS();
+	void UpdateFixFPS();
+
+	//記録時間
+	std::chrono::steady_clock::time_point reference_;
 };
 
